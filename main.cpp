@@ -7,19 +7,18 @@
 using namespace std;
 
 // declare functions:
-vector<vector<string> > readDataset(string pathDataset);
+vector<vector<string> > readDataset(string pathDataset, int s);
 int numLines(ifstream& dataset);
 vector<int> sampleInstances(int n, int numLines);
 vector<string> splitString(string line);
 
 int main() {
-	// sample dataset
+	// sampling dataset
 	vector<vector<string> > instances;
-	instances = readDataset("datasets/iris/iris.data");
+	instances = readDataset("datasets/iris/iris.data", 40);
 
 	// inizialization matrix for graph
-	int graph[instances.size()][instances.size()];
-	graph[0][0] = 1;
+	vector<vector<int> > matrix(instances.size(), vector<int>(instances.size(), 0));
 	
 	return 0;
 }
@@ -27,6 +26,8 @@ int main() {
 // functions:
 
 /* function to read a dataset:
+	pathDataset:	path del dataset
+	s:				dimension of the sample
 	instances:		vector of vector to store the istances and their datas
 	dataset:		dataset file
 	numInstances:	# of lines (instances) of the dataset
@@ -36,7 +37,7 @@ int main() {
 	element:		single data of the readed line
 	instance:		lincked vector of single instance
 */
-vector<vector<string> > readDataset(string pathDataset){
+vector<vector<string> > readDataset(string pathDataset, int s){
 	vector<vector<string> > instances;
 	ifstream dataset(pathDataset);
 	int numInstances;
@@ -52,7 +53,7 @@ vector<vector<string> > readDataset(string pathDataset){
 	numInstances = numLines(dataset);
 
 	// random sample numbers wothout rep
-	vecInstances = sampleInstances(5, numInstances);
+	vecInstances = sampleInstances(s, numInstances);
 	sort(vecInstances.begin(), vecInstances.end());
 
 	// reset file pointer
