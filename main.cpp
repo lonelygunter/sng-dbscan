@@ -18,7 +18,7 @@ int main() {
 	instances = readDataset("datasets/iris/iris.data", 40);
 
 	// inizialization matrix for graph
-	vector<vector<int> > matrix(instances.size(), vector<int>(instances.size(), 0));
+	vector<vector<int> > graph(instances.size(), vector<int>(instances.size(), 0));
 	
 	return 0;
 }
