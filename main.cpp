@@ -4,6 +4,9 @@
 #include <sstream>	// stringstream
 #include <cstdlib>	// rand()
 #include <string>
+
+#include <chrono>
+
 using namespace std;
 
 // declare functions:
@@ -13,6 +16,8 @@ vector<int> sampleInstances(int n, int numLines);
 vector<string> splitString(string line);
 
 int main() {
+	auto t_start = std::chrono::high_resolution_clock::now();
+
 	// sampling dataset
 	vector<vector<string> > instances;
 	instances = readDataset("datasets/iris/iris.data", 40);
@@ -20,6 +25,8 @@ int main() {
 	// inizialization matrix for graph
 	vector<vector<int> > graph(instances.size(), vector<int>(instances.size(), 0));
 	
+	auto t_end = std::chrono::high_resolution_clock::now();
+	cout << "Total time required = " << std::chrono::duration<double, std::milli>(t_end-t_start).count() << endl;
 	return 0;
 }
 
