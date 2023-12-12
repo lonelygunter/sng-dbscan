@@ -4,29 +4,41 @@
 #include <sstream>	// stringstream
 #include <cstdlib>	// rand()
 #include <string>
+#include <cmath>
 
 #include <chrono>
 
 using namespace std;
 
 // declare functions:
-vector<vector<string> > readDataset(string pathDataset, int s);
+vector<vector<double> > readDataset(string pathDataset, int n);
 int numLines(ifstream& dataset);
 vector<int> sampleInstances(int n, int numLines);
-vector<string> splitString(string line);
+vector<double> splitString(string line);
+bool isStringDigit(string str);
+void compareWsnSample(vector<vector<double> > instances, double s, double n, double epsilon[], vector<vector<int> >& graph);
+double euclDist(vector<double> point1, vector<double> point2);
 
-int main() {
-	auto t_start = std::chrono::high_resolution_clock::now();
+int main(){
+	auto t_start = chrono::high_resolution_clock::now();
 
 	// sampling dataset
-	vector<vector<string> > instances;
-	instances = readDataset("datasets/iris/iris.data", 40);
+	vector<vector<double> > instances;
+	int n = 40;
+	double s = 0.4; // sample S
+	double epsilon[2] = {0.2, 2.5};
+
+	instances = readDataset("datasets/iris/iris.data", n);
 
 	// inizialization matrix for graph
 	vector<vector<int> > graph(instances.size(), vector<int>(instances.size(), 0));
-	
-	auto t_end = std::chrono::high_resolution_clock::now();
-	cout << "Total time required = " << std::chrono::duration<double, std::milli>(t_end-t_start).count() << endl;
+
+	// check if a point is in epsilon range
+	compareWsnSample(instances, s, n, epsilon, graph);
+
+	auto t_end = chrono::high_resolution_clock::now();
+	cout << "Total time required = " << chrono::duration<double, milli>(t_end-t_start).count() << endl;
+
 	return 0;
 }
 
@@ -44,8 +56,8 @@ int main() {
 	element:		single data of the readed line
 	instance:		lincked vector of single instance
 */
-vector<vector<string> > readDataset(string pathDataset, int s){
-	vector<vector<string> > instances;
+vector<vector<double> > readDataset(string pathDataset, int n){
+	vector<vector<double> > instances;
 	ifstream dataset(pathDataset);
 	int numInstances;
 	vector<int> vecInstances;
@@ -60,7 +72,7 @@ vector<vector<string> > readDataset(string pathDataset, int s){
 	numInstances = numLines(dataset);
 
 	// random sample numbers wothout rep
-	vecInstances = sampleInstances(s, numInstances);
+	vecInstances = sampleInstances(n, numInstances);
 	sort(vecInstances.begin(), vecInstances.end());
 
 	// reset file pointer
@@ -68,7 +80,7 @@ vector<vector<string> > readDataset(string pathDataset, int s){
 
 	// random sample the dataset:
 	// jump to first sampled line
-	for (int i = 0; i < vecInstances[0]; i++) {
+	for (int i = 0; i <= vecInstances[0]; i++) {
 		if (!getline(dataset, currentLine)) {
 			cerr << "Error reading the file or the file is too short." << endl;
 			dataset.close();
@@ -135,15 +147,75 @@ vector<int> sampleInstances(int n, int numLines){
 /* function to split a string
 	line:	string to split
 */
-vector<string> splitString(string line){
+vector<double> splitString(string line){
 	stringstream ss(line);
 	string element;
-	vector<string> instance;
+	vector<double> instance;
 
 	// put all datas of an instance in a  vector
 	while (getline(ss, element, ',')){
-		instance.push_back(element);
+		if (isStringDigit(element)){
+			instance.push_back(stod(element));
+		}
 	}
 
 	return instance;
 }
+
+/* function to check if a string is a digit:
+	str:	string to check
+	ss:		string stream
+	digit:	digit variable
+*/
+bool isStringDigit(string str){
+    stringstream ss(str);
+    double digit;
+    ss >> digit;
+
+    return ss.eof() && !ss.fail();
+}
+
+/* function that take one point of the "n" sample to compare it with sampled sn points:
+*/
+void compareWsnSample(vector<vector<double> > instances, double s, double n, double epsilon[], vector<vector<int> >& graph){
+	for (int i = 0; i < instances.size(); i++){
+		// sample of s
+		vector<vector<double> > instancesCpy = instances;
+		int instCpySize = instancesCpy.size();
+
+		while (instancesCpy.size() != instCpySize - s*n){
+			int randline = rand() % instancesCpy.size();
+
+			// to not randomly take the same instance
+			while (instances[i] == instancesCpy[randline]){
+				randline = rand() % instancesCpy.size();
+			}
+
+			// calculate Euclidean distance for all instance infos
+			double euclDistij = euclDist(instances[i], instancesCpy[randline]);
+
+			// check if point are in range epsilon
+			if (euclDistij >= epsilon[0] && euclDistij <= epsilon[1]){
+				graph[i][randline] = 1;
+			}
+
+			instancesCpy.erase(instancesCpy.begin() + randline);
+		}
+	}
+}
+
+/* function that calculate the Euclidean distance between two points
+	point1:			1st point of the distance
+	point2: 		2nd point of the distance
+	euclDistij:		Euclidean distance
+*/
+double euclDist(vector<double> point1, vector<double> point2){
+	double euclDistij = 0;
+	for (int j = 0; j < point1.size(); j++){
+		euclDistij += pow(point1[j] - point2[j], 2);
+	}
+	
+	euclDistij = sqrt(euclDistij);
+
+	return euclDistij;
+} 
