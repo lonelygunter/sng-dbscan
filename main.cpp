@@ -12,6 +12,7 @@
 using namespace std;
 
 // declare functions:
+void getOpt(double& n, double& s, double *epsilon, int argc, char **argv);
 vector<vector<double> > readDataset(string pathDataset, int n);
 int numLines(ifstream& dataset);
 vector<int> sampleInstances(int n, int numLines);
@@ -23,14 +24,35 @@ double euclDist(vector<double> point1, vector<double> point2);
 int main(int argc, char **argv){
 	auto t_start = chrono::high_resolution_clock::now();
 
-	// sampling dataset
 	vector<vector<double> > instances;
-	int n = 40;
+	double n = 40;
 	double s = 0.4;
 	double epsilon[2] = {0.2, 2.4};
 
 	// getopt:
-    int opt;
+	getOpt(n, s, epsilon, argc, argv);
+
+	// sampling dataset
+	instances = readDataset("datasets/iris/iris.data", n);
+
+	// inizialization matrix for graph
+	vector<vector<int> > graph(instances.size(), vector<int>(instances.size(), 0));
+
+	// check if a point is in epsilon range
+	compareWsnSample(instances, s, n, epsilon, graph);
+
+	auto t_end = chrono::high_resolution_clock::now();
+	cout << "Total time required = " << chrono::duration<double, milli>(t_end-t_start).count() << endl;
+
+	return 0;
+}
+
+// functions:
+
+/* function to get options for command line:
+*/
+void getOpt(double& n, double& s, double *epsilon, int argc, char **argv){
+	int opt;
 
     while ((opt = getopt(argc, argv, "n:s:e:")) != -1) {
         switch (opt) {
@@ -57,23 +79,7 @@ int main(int argc, char **argv){
             abort ();
         }
     }
-
-
-	instances = readDataset("datasets/iris/iris.data", n);
-
-	// inizialization matrix for graph
-	vector<vector<int> > graph(instances.size(), vector<int>(instances.size(), 0));
-
-	// check if a point is in epsilon range
-	compareWsnSample(instances, s, n, epsilon, graph);
-
-	auto t_end = chrono::high_resolution_clock::now();
-	cout << "Total time required = " << chrono::duration<double, milli>(t_end-t_start).count() << endl;
-
-	return 0;
 }
-
-// functions:
 
 /* function to read a dataset:
 	pathDataset:	path del dataset
