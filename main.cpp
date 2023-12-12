@@ -4,7 +4,8 @@
 #include <sstream>	// stringstream
 #include <cstdlib>	// rand()
 #include <string>
-#include <cmath>
+#include <cmath>	// math
+#include <getopt.h>	// getopt
 
 #include <chrono>
 
@@ -19,14 +20,44 @@ bool isStringDigit(string str);
 void compareWsnSample(vector<vector<double> > instances, double s, double n, double epsilon[], vector<vector<int> >& graph);
 double euclDist(vector<double> point1, vector<double> point2);
 
-int main(){
+int main(int argc, char **argv){
 	auto t_start = chrono::high_resolution_clock::now();
 
 	// sampling dataset
 	vector<vector<double> > instances;
 	int n = 40;
-	double s = 0.4; // sample S
-	double epsilon[2] = {0.2, 2.5};
+	double s = 0.4;
+	double epsilon[2] = {0.2, 2.4};
+
+	// getopt:
+    int opt;
+
+    while ((opt = getopt(argc, argv, "n:s:e:")) != -1) {
+        switch (opt) {
+        case 'n':
+            n = stod(optarg);
+			cout << "n: " << n << endl;
+            break;
+        case 's':
+            s = stod(optarg);
+			cout << "s: " << s << endl;
+            break;
+        case 'e': {
+			vector<double> eps = splitString(optarg);
+			epsilon[0] = eps[0];
+			epsilon[1] = eps [1];
+
+			cout << "epsilon: [" << epsilon[0] << ", " << epsilon[1] << "]" << endl;
+			}
+            break;
+        case '?':
+			cout << "This is not an implemented option" << endl;
+            break;
+        default:
+            abort ();
+        }
+    }
+
 
 	instances = readDataset("datasets/iris/iris.data", n);
 
