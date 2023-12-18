@@ -61,26 +61,35 @@ int main(int argc, char **argv){
 	// 4. inizialization of an array of l items
 	vector<vector<vector<int> > > k;
 
-	for (int i = 0; i < instances.size(); ++i) {
-        for (int j = 0; j < instances.size(); ++j) {
-            cout << graph[i][j] << " ";
-        }
-        cout << endl;
-    }
+	// print graph
+	// for (int i = 0; i < instances.size(); ++i) {
+    //     for (int j = 0; j < instances.size(); ++j) {
+    //         cout << graph[i][j] << " ";
+    //     }
+    //     cout << endl;
+    // }
 
 	// 5. create the connected components
 	k.resize(l);
 	connectedComponents(graph, minpts, l, instances.size(), k);
 
-	for (size_t i = 0; i < k.size(); ++i) {
-        for (size_t j = 0; j < k[i].size(); ++j) {
-            for (size_t m = 0; m < k[i][j].size(); ++m) {
-                cout << k[i][j][m] << " ";
-            }
-            cout << "\n";
-        }
-        cout << endl;
-    }
+	// print k
+	// for (size_t i = 0; i < k.size(); ++i) {
+    //     for (size_t j = 0; j < k[i].size(); ++j) {
+    //         for (size_t m = 0; m < k[i][j].size(); ++m) {
+    //             cout << k[i][j][m] << " ";
+    //         }
+    //         cout << "\n";
+    //     }
+    //     cout << endl;
+    // }
+
+	// 6. inizialization of an array of l items
+	vector<vector<vector<int> > > c;
+
+	// 7. create the clusters
+	c.resize(l);
+	
 
 	chrono::high_resolution_clock::time_point t_end = chrono::high_resolution_clock::now();
 	cout << "Total time required = " << chrono::duration<double, milli>(t_end-t_start).count() << endl;
@@ -357,7 +366,14 @@ int calcLinks(int instance, vector<vector<int> >& graph){
 }
 
 /* function to find the connected components:
-	graphCPy:				graph where can delete 1s without influence k items
+	i:						index of the current instance
+	graph:					graph where can delete 1s without influence k items
+	graphCPy:				original graph
+	minPtsInstances:		vector of all minPts instances
+	totInstances:			size of minPtsInstances
+	k:						vector where put all instaces
+	usedMinPtsInstances:	vector with used minPts instances
+	zero:					bool to check if current instance was used or not
 */
 void findConnComp(int i, vector<vector<int> >& graph, vector<vector<int> > graphCpy, vector<int>& minPtsInstances, int totInstances, vector<vector<int> >& k, vector<int>& usedMinPtsInstances){
 	bool zero = false;
@@ -373,14 +389,13 @@ void findConnComp(int i, vector<vector<int> >& graph, vector<vector<int> > graph
 				// to shorten the recursive sequence
 				setAllToZero(graph, minPtsInstances, minPtsInstances[i]);
 			
-				// notice that all this instance was set to zero
+				// notice that all instances connection with the corrent instance was set to zero
 				zero = true;
 
 				// track the used minPtsIntance
 				if (!isInMinPts(minPtsInstances[i], usedMinPtsInstances)){
 					usedMinPtsInstances.push_back(minPtsInstances[i]);
 				}
-				
 				
 				findConnComp(findMinPtsInstances(j, minPtsInstances), graph, graphCpy, minPtsInstances, totInstances, k, usedMinPtsInstances);
 			}
@@ -389,7 +404,7 @@ void findConnComp(int i, vector<vector<int> >& graph, vector<vector<int> > graph
 		}
 	}
 
-	// set to zero all this instances
+	// set to zero all instances connection with the corrent instance
 	if (!zero){
 		// track the used minPtsIntance
 		if (!isInMinPts(minPtsInstances[i], usedMinPtsInstances)){
