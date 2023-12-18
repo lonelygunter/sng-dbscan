@@ -6,13 +6,14 @@
 #include <string>
 #include <cmath>	// math
 #include <getopt.h>	// getopt
+#include <numeric>
 
 #include <chrono>
 
 using namespace std;
 
 // declare functions:
-void getOpt(double& n, double& s, double *epsilon, int argc, char **argv);
+void getOpt(int& n, double& s, double *epsilon, int& l, int& minpts, int argc, char **argv);
 vector<vector<double> > readDataset(string pathDataset, int n);
 int numLines(ifstream& dataset);
 vector<int> sampleInstances(int n, int numLines);
@@ -20,28 +21,68 @@ vector<double> splitString(string line);
 bool isStringDigit(string str);
 void compareWsnSample(vector<vector<double> > instances, double s, double n, double epsilon[], vector<vector<int> >& graph);
 double euclDist(vector<double> point1, vector<double> point2);
+void connectedComponents(vector<vector<int> > graph, int minpts, int l, int totInstances, vector<vector<vector<int> > >& k);
+int calcLinks(int instance, vector<vector<int> >& graph);
+void findConnComp(int i, vector<vector<int> >& graph, vector<vector<int> > graphCpy, vector<int>& minPtsInstances, int totInstances, vector<vector<int> >& k, vector<int>& usedMinPtsInstances);
+bool isInMinPts(int instance, vector<int> minPtsInstances);
+void setAllToZero(vector<vector<int> >& graph, vector<int> minPtsInstances, int instance);
+int findMinPtsInstances(int instance, vector<int> minPtsInstances);
 
+/*
+	n:			dimension of the 1st sample
+	s:			dimension of the 2nd sample
+	epsilon:	range for a point
+	l:			# of classes
+	minpts:		min # of points in the epsilon range of a point
+	k:			subgraph induced by vertices of degree at least MinPts
+*/
 int main(int argc, char **argv){
-	auto t_start = chrono::high_resolution_clock::now();
+	chrono::high_resolution_clock::time_point t_start = chrono::high_resolution_clock::now();
 
 	vector<vector<double> > instances;
-	double n = 40;
-	double s = 0.4;
+	int n = 30;
+	double s = 0.5;
 	double epsilon[2] = {0.2, 2.4};
+	int l = 8;
+	int minpts = 1;
 
 	// getopt:
-	getOpt(n, s, epsilon, argc, argv);
+	getOpt(n, s, epsilon, l, minpts, argc, argv);
 
-	// sampling dataset
+	// 1. sampling dataset
 	instances = readDataset("datasets/iris/iris.data", n);
 
-	// inizialization matrix for graph
+	// 2. inizialization of a matrix for graph
 	vector<vector<int> > graph(instances.size(), vector<int>(instances.size(), 0));
 
-	// check if a point is in epsilon range
+	// 3. check if a point is in epsilon range
 	compareWsnSample(instances, s, n, epsilon, graph);
+	
+	// 4. inizialization of an array of l items
+	vector<vector<vector<int> > > k;
 
-	auto t_end = chrono::high_resolution_clock::now();
+	for (int i = 0; i < instances.size(); ++i) {
+        for (int j = 0; j < instances.size(); ++j) {
+            cout << graph[i][j] << " ";
+        }
+        cout << endl;
+    }
+
+	// 5. create the connected components
+	k.resize(l);
+	connectedComponents(graph, minpts, l, instances.size(), k);
+
+	for (size_t i = 0; i < k.size(); ++i) {
+        for (size_t j = 0; j < k[i].size(); ++j) {
+            for (size_t m = 0; m < k[i][j].size(); ++m) {
+                cout << k[i][j][m] << " ";
+            }
+            cout << "\n";
+        }
+        cout << endl;
+    }
+
+	chrono::high_resolution_clock::time_point t_end = chrono::high_resolution_clock::now();
 	cout << "Total time required = " << chrono::duration<double, milli>(t_end-t_start).count() << endl;
 
 	return 0;
@@ -51,10 +92,10 @@ int main(int argc, char **argv){
 
 /* function to get options for command line:
 */
-void getOpt(double& n, double& s, double *epsilon, int argc, char **argv){
+void getOpt(int& n, double& s, double *epsilon, int& l, int& minpts, int argc, char **argv){
 	int opt;
 
-    while ((opt = getopt(argc, argv, "n:s:e:")) != -1) {
+    while ((opt = getopt(argc, argv, "n:s:e:l:m:")) != -1) {
         switch (opt) {
         case 'n':
             n = stod(optarg);
@@ -71,6 +112,14 @@ void getOpt(double& n, double& s, double *epsilon, int argc, char **argv){
 
 			cout << "epsilon: [" << epsilon[0] << ", " << epsilon[1] << "]" << endl;
 			}
+            break;
+        case 'l':
+            l = stod(optarg);
+			cout << "l: " << l << endl;
+            break;
+        case 'm':
+            minpts = stod(optarg);
+			cout << "minpts: " << minpts << endl;
             break;
         case '?':
 			cout << "This is not an implemented option" << endl;
@@ -218,13 +267,13 @@ void compareWsnSample(vector<vector<double> > instances, double s, double n, dou
 	for (int i = 0; i < instances.size(); i++){
 		// sample of s
 		vector<vector<double> > instancesCpy = instances;
-		int instCpySize = instancesCpy.size();
+		int instCpysnSize = instancesCpy.size() - s*n;
 
-		while (instancesCpy.size() != instCpySize - s*n){
+		while (instancesCpy.size() != instCpysnSize){
 			int randline = rand() % instancesCpy.size();
 
 			// to not randomly take the same instance
-			while (instances[i] == instancesCpy[randline]){
+			while (i == randline){
 				randline = rand() % instancesCpy.size();
 			}
 
@@ -255,4 +304,133 @@ double euclDist(vector<double> point1, vector<double> point2){
 	euclDistij = sqrt(euclDistij);
 
 	return euclDistij;
-} 
+}
+
+/* function to create the connected components:
+	minPtsInstances:		vector of istances that have minPts vectors connected
+	usedMinPtsInstances:	vector to track which instance was used
+	graphCPy:				graph where can delete 1s without influence k items
+*/
+void connectedComponents(vector<vector<int> > graph, int minpts, int l, int totInstances, vector<vector<vector<int> > >& k){
+	vector<int> minPtsInstances;
+	vector<int> usedMinPtsInstances;
+	vector<vector<int> > graphCpy = graph;
+
+	// check all instances with MinPts vartices
+	for (int i = 0; i < totInstances; i++){
+		int calcololinks = calcLinks(i, graph);
+		if (calcololinks >= minpts){
+			minPtsInstances.push_back(i);
+		}
+	}
+
+	// fill k with all k_i subgraphs
+	for (int i = 0; i < l; i++){
+		if (minPtsInstances.size() != 0){
+			// add manually the 1st instance
+			k[i].push_back(graphCpy[minPtsInstances[0]]);
+
+			findConnComp(0, graph, graphCpy, minPtsInstances, totInstances, k[i], usedMinPtsInstances);
+
+			// track all used minPtsInstances in this k_i
+			for (int j = 0; j < usedMinPtsInstances.size(); j++){
+				int eraseMinPts = findMinPtsInstances(usedMinPtsInstances[j], minPtsInstances);
+				if (eraseMinPts >= 0){
+					minPtsInstances.erase(minPtsInstances.begin() + eraseMinPts);
+				}
+			}
+		}
+	}
+}
+
+/* function to calculate # of links into an istance in the graph:
+	sum:		summarize of the 1s of a graph row
+*/
+int calcLinks(int instance, vector<vector<int> >& graph){
+	int sum = 0;
+
+	for(int i = 0; i < graph[instance].size(); i++){
+		sum += graph[instance][i];
+	}
+
+	return sum;
+}
+
+/* function to find the connected components:
+	graphCPy:				graph where can delete 1s without influence k items
+*/
+void findConnComp(int i, vector<vector<int> >& graph, vector<vector<int> > graphCpy, vector<int>& minPtsInstances, int totInstances, vector<vector<int> >& k, vector<int>& usedMinPtsInstances){
+	bool zero = false;
+
+	for (int j = 0; j < totInstances; j++){
+		if (graph[minPtsInstances[i]][j] == 1){
+			k.push_back(graphCpy[j]);
+
+			// step into only in instaces that have minPts vertices
+			if (isInMinPts(j, minPtsInstances)){
+				setAllToZero(graph, minPtsInstances, j);
+
+				// to shorten the recursive sequence
+				setAllToZero(graph, minPtsInstances, minPtsInstances[i]);
+			
+				// notice that all this instance was set to zero
+				zero = true;
+
+				// track the used minPtsIntance
+				if (!isInMinPts(minPtsInstances[i], usedMinPtsInstances)){
+					usedMinPtsInstances.push_back(minPtsInstances[i]);
+				}
+				
+				
+				findConnComp(findMinPtsInstances(j, minPtsInstances), graph, graphCpy, minPtsInstances, totInstances, k, usedMinPtsInstances);
+			}
+
+			setAllToZero(graph, minPtsInstances, j);
+		}
+	}
+
+	// set to zero all this instances
+	if (!zero){
+		// track the used minPtsIntance
+		if (!isInMinPts(minPtsInstances[i], usedMinPtsInstances)){
+			usedMinPtsInstances.push_back(minPtsInstances[i]);
+		}
+		
+		setAllToZero(graph, minPtsInstances, minPtsInstances[i]);
+	}
+}
+
+/* function to check if an instance is in minPts range:
+	instance:		number of the instance to check
+*/
+bool isInMinPts(int instance, vector<int> minPtsInstances){
+	for (int i = 0; i < minPtsInstances.size(); i++){
+		if (minPtsInstances[i] == instance){
+			return true;
+		}
+	}
+	
+	return false;
+}
+
+/* function to shorten the recursive function fincConnComp:
+	instance:		number of the column instance of the graph
+*/
+void setAllToZero(vector<vector<int> >& graph, vector<int> minPtsInstances, int instance){
+	for (int i = 0; i < minPtsInstances.size(); i++){
+		graph[minPtsInstances[i]][instance] = 0;
+	}
+}
+
+/* function to find the id of an instance into minPtsInstances:
+	instance:		number of ther instance to find
+*/
+int findMinPtsInstances(int instance, vector<int> minPtsInstances){
+	for (int i = 0; i < minPtsInstances.size(); i++){
+		if (minPtsInstances[i] == instance){
+			return i;
+		}
+	}
+	
+	return -1;
+}
