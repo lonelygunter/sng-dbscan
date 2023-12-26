@@ -13,65 +13,67 @@
 using namespace std;
 
 // declare functions:
-void getOpt(int& n, double& s, double *epsilon, int& l, int& minpts, int argc, char **argv);
+void getOpt(string& filePath, int& n, double& s, double *epsilon, int& l, int& minpts, int argc, char **argv);
 vector<vector<double> > readDataset(string pathDataset, int n);
 int numLines(ifstream& dataset);
-vector<int> sampleInstances(int n, int numLines);
-vector<double> splitString(string line);
+vector<vector<double> > sampleInstances(int n, int numLines, ifstream& dataset);
+vector<double> splitString(int index, string line);
 bool isStringDigit(string str);
 void compareWsnSample(vector<vector<double> > instances, double s, double n, double epsilon[], vector<vector<int> >& graph);
 double euclDist(vector<double> point1, vector<double> point2);
-void connectedComponents(vector<vector<int> > graph, int minpts, int l, int totInstances, vector<vector<vector<int> > >& k);
-int calcLinks(int instance, vector<vector<int> >& graph);
-void findConnComp(int i, vector<vector<int> >& graph, vector<vector<int> > graphCpy, vector<int>& minPtsInstances, int totInstances, vector<vector<int> >& k, vector<int>& usedMinPtsInstances);
+void connectedComponents(vector<vector<int> > graph, int minpts, int l, int totInstances, vector<vector<vector<double> > >& k, vector<vector<double> > instances);
+void findConnComp(int i, vector<vector<int> >& graph, vector<vector<double> > instances, vector<int>& minPtsInstances, int totInstances, vector<vector<double> >& k, vector<int>& usedMinPtsInstances);
 bool isInMinPts(int instance, vector<int> minPtsInstances);
 void setAllToZero(vector<vector<int> >& graph, vector<int> minPtsInstances, int instance);
 int findMinPtsInstances(int instance, vector<int> minPtsInstances);
+// void findClusters(vector<vector<double> > instances, int l, vector<vector<vector<double> > > k, vector<vector<vector<double> > >& c);
+// bool isInVector(vector<double> instance, vector<vector<double> > ki);
 
 /*
+	instances:	istances randomly sampled
 	n:			dimension of the 1st sample
 	s:			dimension of the 2nd sample
 	epsilon:	range for a point
 	l:			# of classes
 	minpts:		min # of points in the epsilon range of a point
+	filePath:	path of the dataset
+	graph:		graph of the dataset
 	k:			subgraph induced by vertices of degree at least MinPts
+	c:			vector of the clusters
 */
 int main(int argc, char **argv){
-	chrono::high_resolution_clock::time_point t_start = chrono::high_resolution_clock::now();
-
 	vector<vector<double> > instances;
-	int n = 30;
-	double s = 0.5;
+	int n = 100000;
+	double s = 0.4;
 	double epsilon[2] = {0.2, 2.4};
 	int l = 8;
-	int minpts = 1;
+	int minpts = 4;
+	string filePath = "datasets/eshop100k.csv";
 
 	// getopt:
-	getOpt(n, s, epsilon, l, minpts, argc, argv);
+	getOpt(filePath, n, s, epsilon, l, minpts, argc, argv);
 
 	// 1. sampling dataset
-	instances = readDataset("datasets/iris/iris.data", n);
+	instances = readDataset(filePath, n);
 
 	// 2. inizialization of a matrix for graph
-	vector<vector<int> > graph(instances.size(), vector<int>(instances.size(), 0));
+	vector<vector<int> > graph;
+	graph.resize(instances.size());
+
+	chrono::high_resolution_clock::time_point t_start = chrono::high_resolution_clock::now();
 
 	// 3. check if a point is in epsilon range
 	compareWsnSample(instances, s, n, epsilon, graph);
+
+	chrono::high_resolution_clock::time_point t_end = chrono::high_resolution_clock::now();
+	cout << "Total time required = " << chrono::duration<double, milli>(t_end-t_start).count() << endl;
 	
 	// 4. inizialization of an array of l items
-	vector<vector<vector<int> > > k;
-
-	// print graph
-	// for (int i = 0; i < instances.size(); ++i) {
-    //     for (int j = 0; j < instances.size(); ++j) {
-    //         cout << graph[i][j] << " ";
-    //     }
-    //     cout << endl;
-    // }
+	vector<vector<vector<double> > > k;
 
 	// 5. create the connected components
 	k.resize(l);
-	connectedComponents(graph, minpts, l, instances.size(), k);
+	connectedComponents(graph, minpts, l, instances.size(), k, instances);
 
 	// print k
 	// for (size_t i = 0; i < k.size(); ++i) {
@@ -84,15 +86,12 @@ int main(int argc, char **argv){
     //     cout << endl;
     // }
 
-	// 6. inizialization of an array of l items
-	vector<vector<vector<int> > > c;
+	// // 6. inizialization of an array of l items
+	// vector<vector<vector<double> > > c;
 
-	// 7. create the clusters
-	c.resize(l);
-	
-
-	chrono::high_resolution_clock::time_point t_end = chrono::high_resolution_clock::now();
-	cout << "Total time required = " << chrono::duration<double, milli>(t_end-t_start).count() << endl;
+	// // 7. create the clusters
+	// c.resize(l);
+	// findClusters(instances, l, k, c);
 
 	return 0;
 }
@@ -101,11 +100,15 @@ int main(int argc, char **argv){
 
 /* function to get options for command line:
 */
-void getOpt(int& n, double& s, double *epsilon, int& l, int& minpts, int argc, char **argv){
+void getOpt(string& filePath, int& n, double& s, double *epsilon, int& l, int& minpts, int argc, char **argv){
 	int opt;
 
-    while ((opt = getopt(argc, argv, "n:s:e:l:m:")) != -1) {
+    while ((opt = getopt(argc, argv, "f:n:s:e:l:m:")) != -1) {
         switch (opt) {
+		case 'f':
+			filePath = optarg;
+			cout << "filePath: " << filePath << endl;
+			break;
         case 'n':
             n = stod(optarg);
 			cout << "n: " << n << endl;
@@ -115,11 +118,8 @@ void getOpt(int& n, double& s, double *epsilon, int& l, int& minpts, int argc, c
 			cout << "s: " << s << endl;
             break;
         case 'e': {
-			vector<double> eps = splitString(optarg);
-			epsilon[0] = eps[0];
-			epsilon[1] = eps [1];
-
-			cout << "epsilon: [" << epsilon[0] << ", " << epsilon[1] << "]" << endl;
+			vector<double> eps = splitString(-1, optarg);
+			cout << "epsilon: [" << eps[0] << ", " << eps[1] << "]" << endl;
 			}
             break;
         case 'l':
@@ -141,15 +141,11 @@ void getOpt(int& n, double& s, double *epsilon, int& l, int& minpts, int argc, c
 
 /* function to read a dataset:
 	pathDataset:	path del dataset
-	s:				dimension of the sample
 	instances:		vector of vector to store the istances and their datas
 	dataset:		dataset file
 	numInstances:	# of lines (instances) of the dataset
 	vecInstances:	vector of # of the instances sampled
 	currentLine:	current line pointer from the pointer of the file
-	ss:				string stream of the current line
-	element:		single data of the readed line
-	instance:		lincked vector of single instance
 */
 vector<vector<double> > readDataset(string pathDataset, int n){
 	vector<vector<double> > instances;
@@ -166,38 +162,12 @@ vector<vector<double> > readDataset(string pathDataset, int n){
 	// take the number of the total instances
 	numInstances = numLines(dataset);
 
-	// random sample numbers wothout rep
-	vecInstances = sampleInstances(n, numInstances);
-	sort(vecInstances.begin(), vecInstances.end());
-
 	// reset file pointer
 	dataset.seekg(0, ios::beg);
 
-	// random sample the dataset:
-	// jump to first sampled line
-	for (int i = 0; i <= vecInstances[0]; i++) {
-		if (!getline(dataset, currentLine)) {
-			cerr << "Error reading the file or the file is too short." << endl;
-			dataset.close();
-		}
-	}
-
-	// add the instance element by element
-	instances.push_back(splitString(currentLine));
-
-	// jump to other sampled line
-	for (int i = 1; i < vecInstances.size(); i++){
-		for (int j = 0; j < vecInstances[i]-vecInstances[i-1]; j++) {
-			if (!getline(dataset, currentLine)) {
-				cerr << "Error reading the file or the file is too short." << endl;
-				dataset.close();
-			}
-		}
-
-		// add the instance element by element
-		instances.push_back(splitString(currentLine));
-	}
-
+	// random sample numbers wothout rep
+	instances = sampleInstances(n, numInstances, dataset);
+	
 	dataset.close();
 	return instances;
 }
@@ -216,36 +186,76 @@ int numLines(ifstream& dataset){
 /* function to take a n random lines (instances) from a file without rep
 	n:				# of lines (instances) to take
 	numLines:		# of lines into the file
-	lines:			vector with all # of lines
-	linesSize:		original # of the lines
+	dataset:		dataset to use
+	currentLine:	line taked in that time
+	instances:		istances randomly sampled
+	oldRandLine:	previous rand line generated
+	range:			range of the sampling
+	minRange:		min lim
+	maxRange:		max lim
+	loopIter:		distance from the previous rand to the next
+	index:			index of the instance
 */
-vector<int> sampleInstances(int n, int numLines){
+vector<vector<double> > sampleInstances(int n, int numLines, ifstream& dataset){
 	// create a vector to semplify generation of random number without rep
-	vector<int> lines;
-	for (int i = 0; i < numLines; i++){
-		lines.push_back(i);
-	}
+	string currentLine;
+	vector<vector<double> > instances;
+	int oldRandLine = 0;
+	int range = numLines/n;
+	int minRange = 0;
+	int maxRange = range;
+	int index = 0;
 	
 	// take random elements from "lines"
-	vector<int> numLineInstances;
-	int linesSize = lines.size();
-	while (lines.size() != linesSize - n){
-		int randline = rand() % lines.size();
-		numLineInstances.push_back(lines[randline]);
+	for (int i = 0; i < numLines; i += range){
+		int randline = (rand() % (maxRange - minRange)) + minRange;
+		int loopIter = randline - oldRandLine;
 
-		lines.erase(lines.begin() + randline);
+		// random sample into the dataset after current position:
+		for (int j = 0; j <= loopIter; j++){
+			if (!getline(dataset, currentLine)) {
+				cerr << "Error reading the file or the file is too short." << endl;
+
+				// check if the current pointer of the file is in EOF
+				if (dataset.eof()){
+					return instances;
+				}
+
+				dataset.close();
+			}
+		}
+
+		instances.push_back(splitString(index++, currentLine));
+
+		oldRandLine = randline;
+		minRange += range;
+		maxRange += range;
+		
+		// check if the max limit of the range if > of the total of the lines in the dataset
+		if (maxRange > numLines){
+			maxRange = numLines;
+		}
 	}
 	
-	return numLineInstances;
+	return instances;
 }
 
 /* function to split a string
-	line:	string to split
+	index:			index of the instance (-1 to use the function to split random string)
+	line:			string to split
+	ss:				string stream of the current line
+	element:		single data of the readed line
+	instance:		lincked vector of single instance
 */
-vector<double> splitString(string line){
+vector<double> splitString(int index, string line){
 	stringstream ss(line);
 	string element;
 	vector<double> instance;
+
+	// add the index of the instance
+	if (index >= 0){
+		instance.push_back(index);
+	}
 
 	// put all datas of an instance in a  vector
 	while (getline(ss, element, ',')){
@@ -271,30 +281,97 @@ bool isStringDigit(string str){
 }
 
 /* function that take one point of the "n" sample to compare it with sampled sn points:
+	instances:	istances randomly sampled
+	s:			dimension of the 2nd sample
+	n:			dimension of the 1st sample
+	epsilon:	range for a point
+	graph:		graph of the dataset
 */
+// void compareWsnSample(vector<vector<double> > instances, double s, double n, double epsilon[], vector<vector<int> >& graph){
+// 	for (int i = 1; i < instances.size(); i++){
+// 		// sample of s
+// 		vector<vector<double> > instancesCpy = instances;
+// 		int instCpysnSize = instancesCpy.size() - s*n;
+
+// 		while (instancesCpy.size() != instCpysnSize){
+// 			int randline = rand() % instancesCpy.size();
+
+// 			// to not randomly take the same instance
+// 			while (i == randline || randline == 0){
+// 				randline = rand() % instancesCpy.size();
+// 			}
+
+// 			// calculate Euclidean distance for all instance infos
+// 			double euclDistij = euclDist(instances[i], instancesCpy[randline]);
+
+// 			// check if point are in range epsilon
+// 			if (euclDistij >= epsilon[0] && euclDistij <= epsilon[1]){
+// 				graph[i].insert(graph[i].begin(), randline);
+// 			}
+
+// 			instancesCpy.erase(instancesCpy.begin() + randline);
+// 		}
+// 	}
+// }
 void compareWsnSample(vector<vector<double> > instances, double s, double n, double epsilon[], vector<vector<int> >& graph){
 	for (int i = 0; i < instances.size(); i++){
-		// sample of s
-		vector<vector<double> > instancesCpy = instances;
-		int instCpysnSize = instancesCpy.size() - s*n;
+		int range = n/(s*n);
+		int minRange = 0;
+		int maxRange = range;
 
-		while (instancesCpy.size() != instCpysnSize){
-			int randline = rand() % instancesCpy.size();
+		// sample of s
+		for (int j = 0; j < s*n; j++){
+			int randline = (rand() % (maxRange - minRange)) + minRange;
+			// cout << "randline: " << randline << endl;
 
 			// to not randomly take the same instance
 			while (i == randline){
-				randline = rand() % instancesCpy.size();
+				randline = (rand() % (maxRange - minRange)) + minRange;
+				// cout <<  "while randline: " << randline << endl;
 			}
 
 			// calculate Euclidean distance for all instance infos
-			double euclDistij = euclDist(instances[i], instancesCpy[randline]);
+			// cout << "euclDist INIZIO:" << endl;
+			// cout << "i: " << i << endl;
+			
+			// cout << "instances[0]: " << endl;
+			// for (double value : instances[0]) {
+			// 	cout << value << ' ';
+			// }
+			// cout << std::endl;
+
+			// cout << "instances[i]: " << endl;
+			// for (double value : instances[i]) {
+			// 	cout << value << ' ';
+			// }
+			// cout << std::endl;
+
+			// cout << "instances[randline]: " << endl;
+			// for (double value : instances[randline]) {
+			// 	cout << value << ' ';
+			// }
+			// cout << std::endl;
+
+			// to disregard a comparison between two instances 
+			if (instances[i].size() != instances[randline].size()){
+				j--;
+				continue;
+			}
+
+			double euclDistij = euclDist(instances[i], instances[randline]);
+			// cout << "euclDist: " << &euclDist << endl;
 
 			// check if point are in range epsilon
 			if (euclDistij >= epsilon[0] && euclDistij <= epsilon[1]){
-				graph[i][randline] = 1;
+				graph[i].insert(graph[i].begin(), randline);
+				// cout << "ok i: " << i << endl;
 			}
 
-			instancesCpy.erase(instancesCpy.begin() + randline);
+			minRange += range;
+			maxRange += range;
+			if (maxRange > n){
+				maxRange = n;
+			}
 		}
 	}
 }
@@ -306,6 +383,7 @@ void compareWsnSample(vector<vector<double> > instances, double s, double n, dou
 */
 double euclDist(vector<double> point1, vector<double> point2){
 	double euclDistij = 0;
+
 	for (int j = 0; j < point1.size(); j++){
 		euclDistij += pow(point1[j] - point2[j], 2);
 	}
@@ -318,17 +396,14 @@ double euclDist(vector<double> point1, vector<double> point2){
 /* function to create the connected components:
 	minPtsInstances:		vector of istances that have minPts vectors connected
 	usedMinPtsInstances:	vector to track which instance was used
-	graphCPy:				graph where can delete 1s without influence k items
 */
-void connectedComponents(vector<vector<int> > graph, int minpts, int l, int totInstances, vector<vector<vector<int> > >& k){
+void connectedComponents(vector<vector<int> > graph, int minpts, int l, int totInstances, vector<vector<vector<double> > >& k, vector<vector<double> > instances){
 	vector<int> minPtsInstances;
 	vector<int> usedMinPtsInstances;
-	vector<vector<int> > graphCpy = graph;
 
 	// check all instances with MinPts vartices
 	for (int i = 0; i < totInstances; i++){
-		int calcololinks = calcLinks(i, graph);
-		if (calcololinks >= minpts){
+		if (graph[i].size() >= minpts){
 			minPtsInstances.push_back(i);
 		}
 	}
@@ -337,9 +412,9 @@ void connectedComponents(vector<vector<int> > graph, int minpts, int l, int totI
 	for (int i = 0; i < l; i++){
 		if (minPtsInstances.size() != 0){
 			// add manually the 1st instance
-			k[i].push_back(graphCpy[minPtsInstances[0]]);
+			k[i].push_back(instances[minPtsInstances[0]]);
 
-			findConnComp(0, graph, graphCpy, minPtsInstances, totInstances, k[i], usedMinPtsInstances);
+			findConnComp(0, graph, instances, minPtsInstances, totInstances, k[i], usedMinPtsInstances);
 
 			// track all used minPtsInstances in this k_i
 			for (int j = 0; j < usedMinPtsInstances.size(); j++){
@@ -352,19 +427,6 @@ void connectedComponents(vector<vector<int> > graph, int minpts, int l, int totI
 	}
 }
 
-/* function to calculate # of links into an istance in the graph:
-	sum:		summarize of the 1s of a graph row
-*/
-int calcLinks(int instance, vector<vector<int> >& graph){
-	int sum = 0;
-
-	for(int i = 0; i < graph[instance].size(); i++){
-		sum += graph[instance][i];
-	}
-
-	return sum;
-}
-
 /* function to find the connected components:
 	i:						index of the current instance
 	graph:					graph where can delete 1s without influence k items
@@ -375,12 +437,12 @@ int calcLinks(int instance, vector<vector<int> >& graph){
 	usedMinPtsInstances:	vector with used minPts instances
 	zero:					bool to check if current instance was used or not
 */
-void findConnComp(int i, vector<vector<int> >& graph, vector<vector<int> > graphCpy, vector<int>& minPtsInstances, int totInstances, vector<vector<int> >& k, vector<int>& usedMinPtsInstances){
+void findConnComp(int i, vector<vector<int> >& graph, vector<vector<double> > instances, vector<int>& minPtsInstances, int totInstances, vector<vector<double> >& k, vector<int>& usedMinPtsInstances){
 	bool zero = false;
 
 	for (int j = 0; j < totInstances; j++){
 		if (graph[minPtsInstances[i]][j] == 1){
-			k.push_back(graphCpy[j]);
+			k.push_back(instances[j]);
 
 			// step into only in instaces that have minPts vertices
 			if (isInMinPts(j, minPtsInstances)){
@@ -397,7 +459,7 @@ void findConnComp(int i, vector<vector<int> >& graph, vector<vector<int> > graph
 					usedMinPtsInstances.push_back(minPtsInstances[i]);
 				}
 				
-				findConnComp(findMinPtsInstances(j, minPtsInstances), graph, graphCpy, minPtsInstances, totInstances, k, usedMinPtsInstances);
+				findConnComp(findMinPtsInstances(j, minPtsInstances), graph, instances, minPtsInstances, totInstances, k, usedMinPtsInstances);
 			}
 
 			setAllToZero(graph, minPtsInstances, j);
@@ -449,3 +511,31 @@ int findMinPtsInstances(int instance, vector<int> minPtsInstances){
 	
 	return -1;
 }
+
+// /* function to determine the clusters:
+// */
+// void findClusters(vector<vector<double> > instances, int l, vector<vector<vector<double> > > k, vector<vector<vector<double> > >& c){
+// 	int connComp = 0;
+
+// 	for (int i = 0; i < instances.size(); i++){
+// 		for (int j = 0; j < l; j++){
+// 			// if (isInVector(instances[i], k[j]) || ){
+// 			// 	c[j].push_back(instances[i]);
+// 			// } else if (){
+
+// 			// }
+// 		}
+// 	}
+// }
+
+// /* function to find an instance in k:
+// */
+// bool isInVector(vector<double> instance, vector<vector<double> > ki){
+// 	for (int i = 0; i < ki.size(); i++){
+// 		if (instance == ki[i]){
+// 			return true;
+// 		}
+// 	}
+	
+// 	return false;
+// }
