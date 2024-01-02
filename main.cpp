@@ -19,7 +19,7 @@ int numLines(ifstream& dataset);
 vector<vector<double> > sampleInstances(int n, int numLines, ifstream& dataset);
 vector<double> splitString(int index, string line);
 bool isStringDigit(string str);
-void compareWsnSample(vector<vector<double> > instances, double s, double n, double epsilon[], vector<vector<int> >& graph);
+void compareWsnSample(vector<vector<double> > instances, double s, int n, double epsilon[], vector<vector<int> >& graph);
 double euclDist(vector<double> point1, vector<double> point2);
 void connectedComponents(vector<vector<int> > graph, int minpts, int l, int totInstances, vector<vector<vector<double> > >& k, vector<vector<double> > instances);
 void findConnComp(int i, vector<vector<int> >& graph, vector<vector<double> > instances, vector<int>& minPtsInstances, int totInstances, vector<vector<double> >& k, vector<int>& usedMinPtsInstances);
@@ -43,12 +43,12 @@ int findMinPtsInstances(int instance, vector<int> minPtsInstances);
 */
 int main(int argc, char **argv){
 	vector<vector<double> > instances;
-	int n = 100000;
+	int n = 30;
 	double s = 0.4;
 	double epsilon[2] = {0.2, 2.4};
 	int l = 8;
 	int minpts = 4;
-	string filePath = "datasets/eshop100k.csv";
+	string filePath = "datasets/iris150.data";
 
 	// getopt:
 	getOpt(filePath, n, s, epsilon, l, minpts, argc, argv);
@@ -60,13 +60,8 @@ int main(int argc, char **argv){
 	vector<vector<int> > graph;
 	graph.resize(instances.size());
 
-	chrono::high_resolution_clock::time_point t_start = chrono::high_resolution_clock::now();
-
 	// 3. check if a point is in epsilon range
 	compareWsnSample(instances, s, n, epsilon, graph);
-
-	chrono::high_resolution_clock::time_point t_end = chrono::high_resolution_clock::now();
-	cout << "Total time required = " << chrono::duration<double, milli>(t_end-t_start).count() << endl;
 	
 	// 4. inizialization of an array of l items
 	vector<vector<vector<double> > > k;
@@ -86,12 +81,17 @@ int main(int argc, char **argv){
     //     cout << endl;
     // }
 
-	// // 6. inizialization of an array of l items
-	// vector<vector<vector<double> > > c;
+	// 6. inizialization of an array of l items
+	vector<vector<vector<double> > > c;
+
+	chrono::high_resolution_clock::time_point t_start = chrono::high_resolution_clock::now();
 
 	// // 7. create the clusters
 	// c.resize(l);
 	// findClusters(instances, l, k, c);
+
+	chrono::high_resolution_clock::time_point t_end = chrono::high_resolution_clock::now();
+	cout << "Total time required = " << chrono::duration<double, milli>(t_end-t_start).count() << endl;
 
 	return 0;
 }
@@ -211,8 +211,18 @@ vector<vector<double> > sampleInstances(int n, int numLines, ifstream& dataset){
 		int randline = (rand() % (maxRange - minRange)) + minRange;
 		int loopIter = randline - oldRandLine;
 
+		// check if have many instances
+		if (instances.size() == n){
+			return instances;
+		}
+
+		// check if want to take the first instance
+		if (randline == 0 || loopIter == 0){
+			getline(dataset, currentLine);
+		}
+
 		// random sample into the dataset after current position:
-		for (int j = 0; j <= loopIter; j++){
+		for (int j = 0; j < loopIter; j++){
 			if (!getline(dataset, currentLine)) {
 				cerr << "Error reading the file or the file is too short." << endl;
 
@@ -313,7 +323,7 @@ bool isStringDigit(string str){
 // 		}
 // 	}
 // }
-void compareWsnSample(vector<vector<double> > instances, double s, double n, double epsilon[], vector<vector<int> >& graph){
+void compareWsnSample(vector<vector<double> > instances, double s, int n, double epsilon[], vector<vector<int> >& graph){
 	for (int i = 0; i < instances.size(); i++){
 		int range = n/(s*n);
 		int minRange = 0;
@@ -517,17 +527,16 @@ int findMinPtsInstances(int instance, vector<int> minPtsInstances){
 // void findClusters(vector<vector<double> > instances, int l, vector<vector<vector<double> > > k, vector<vector<vector<double> > >& c){
 // 	int connComp = 0;
 
-// 	for (int i = 0; i < instances.size(); i++){
-// 		for (int j = 0; j < l; j++){
-// 			// if (isInVector(instances[i], k[j]) || ){
-// 			// 	c[j].push_back(instances[i]);
-// 			// } else if (){
+// 	for (vector<double> instance : instances){
+// 		for (int i = 0; i < l; i++){
+// 			if (isInVector(instance, k[i]) || ){
+// 				c[i].push_back(instance);
+// 			} else if (){
 
-// 			// }
+// 			}
 // 		}
 // 	}
 // }
-
 // /* function to find an instance in k:
 // */
 // bool isInVector(vector<double> instance, vector<vector<double> > ki){
