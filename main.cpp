@@ -19,12 +19,12 @@ int numLines(ifstream& dataset);
 vector<vector<double> > sampleInstances(int n, int numLines, ifstream& dataset);
 vector<double> splitString(int index, string line);
 bool isStringDigit(string str);
-void compareWsnSample(vector<vector<double> > instances, double s, int n, double epsilon[], vector<vector<int> >& graph);
+void compareWsnSample(vector<vector<double> > instances, double s, int n, double epsilon[], vector<vector<int> >& graph, int minPts, vector<int>& minPtsInstances);
 double euclDist(vector<double> point1, vector<double> point2);
-void connectedComponents(vector<vector<int> > graph, int minpts, int l, int totInstances, vector<vector<vector<double> > >& k, vector<vector<double> > instances);
-void findConnComp(int i, vector<vector<int> >& graph, vector<vector<double> > instances, vector<int>& minPtsInstances, int totInstances, vector<vector<double> >& k, vector<int>& usedMinPtsInstances);
+void connectedComponents(vector<vector<int> > graph, int l, vector<vector<vector<double> > >& k, vector<vector<double> > instances, vector<int>& minPtsInstances);
+void findConnComp(int i, vector<vector<int> >& graph, vector<vector<double> > instances, vector<int>& minPtsInstances, vector<int>& minPtsInstancesCopy, vector<vector<double> >& k, vector<int>& usedMinPtsInstances);
 bool isInMinPts(int instance, vector<int> minPtsInstances);
-void setAllToZero(vector<vector<int> >& graph, vector<int> minPtsInstances, int instance);
+void eraseAll(vector<vector<int> >& graph, vector<int> minPtsInstances, int instance);
 int findMinPtsInstances(int instance, vector<int> minPtsInstances);
 // void findClusters(vector<vector<double> > instances, int l, vector<vector<vector<double> > > k, vector<vector<vector<double> > >& c);
 // bool isInVector(vector<double> instance, vector<vector<double> > ki);
@@ -43,15 +43,16 @@ int findMinPtsInstances(int instance, vector<int> minPtsInstances);
 */
 int main(int argc, char **argv){
 	vector<vector<double> > instances;
-	int n = 30;
+	int n = 100;
 	double s = 0.4;
 	double epsilon[2] = {0.2, 2.4};
-	int l = 8;
-	int minpts = 4;
+	int l = 3;
+	int minPts = 2;
 	string filePath = "datasets/iris150.data";
+	vector<int> minPtsInstances;
 
 	// getopt:
-	getOpt(filePath, n, s, epsilon, l, minpts, argc, argv);
+	getOpt(filePath, n, s, epsilon, l, minPts, argc, argv);
 
 	// 1. sampling dataset
 	instances = readDataset(filePath, n);
@@ -61,14 +62,14 @@ int main(int argc, char **argv){
 	graph.resize(instances.size());
 
 	// 3. check if a point is in epsilon range
-	compareWsnSample(instances, s, n, epsilon, graph);
+	compareWsnSample(instances, s, n, epsilon, graph, minPts, minPtsInstances);
 	
 	// 4. inizialization of an array of l items
 	vector<vector<vector<double> > > k;
 
 	// 5. create the connected components
 	k.resize(l);
-	connectedComponents(graph, minpts, l, instances.size(), k, instances);
+	connectedComponents(graph, l, k, instances, minPtsInstances);
 
 	// print k
 	// for (size_t i = 0; i < k.size(); ++i) {
@@ -119,6 +120,9 @@ void getOpt(string& filePath, int& n, double& s, double *epsilon, int& l, int& m
             break;
         case 'e': {
 			vector<double> eps = splitString(-1, optarg);
+			epsilon[0] = eps[0];
+			epsilon[1] = eps[1];
+
 			cout << "epsilon: [" << eps[0] << ", " << eps[1] << "]" << endl;
 			}
             break;
@@ -323,7 +327,7 @@ bool isStringDigit(string str){
 // 		}
 // 	}
 // }
-void compareWsnSample(vector<vector<double> > instances, double s, int n, double epsilon[], vector<vector<int> >& graph){
+void compareWsnSample(vector<vector<double> > instances, double s, int n, double epsilon[], vector<vector<int> >& graph, int minPts, vector<int>& minPtsInstances){
 	for (int i = 0; i < instances.size(); i++){
 		int range = n/(s*n);
 		int minRange = 0;
@@ -383,6 +387,14 @@ void compareWsnSample(vector<vector<double> > instances, double s, int n, double
 				maxRange = n;
 			}
 		}
+
+		// check if is MinPts
+		if (graph[i].size() >= minPts){
+			minPtsInstances.push_back(i);
+			graph[i].insert(graph[i].begin(), 1);
+		} else {
+			graph[i].insert(graph[i].begin(), 0);
+		}
 	}
 }
 
@@ -407,16 +419,8 @@ double euclDist(vector<double> point1, vector<double> point2){
 	minPtsInstances:		vector of istances that have minPts vectors connected
 	usedMinPtsInstances:	vector to track which instance was used
 */
-void connectedComponents(vector<vector<int> > graph, int minpts, int l, int totInstances, vector<vector<vector<double> > >& k, vector<vector<double> > instances){
-	vector<int> minPtsInstances;
+void connectedComponents(vector<vector<int> > graph, int l, vector<vector<vector<double> > >& k, vector<vector<double> > instances, vector<int>& minPtsInstances){
 	vector<int> usedMinPtsInstances;
-
-	// check all instances with MinPts vartices
-	for (int i = 0; i < totInstances; i++){
-		if (graph[i].size() >= minpts){
-			minPtsInstances.push_back(i);
-		}
-	}
 
 	// fill k with all k_i subgraphs
 	for (int i = 0; i < l; i++){
@@ -424,14 +428,23 @@ void connectedComponents(vector<vector<int> > graph, int minpts, int l, int totI
 			// add manually the 1st instance
 			k[i].push_back(instances[minPtsInstances[0]]);
 
-			findConnComp(0, graph, instances, minPtsInstances, totInstances, k[i], usedMinPtsInstances);
+			// to shorten the recursive sequence
+			eraseAll(graph, minPtsInstances, minPtsInstances[0]);
 
-			// track all used minPtsInstances in this k_i
-			for (int j = 0; j < usedMinPtsInstances.size(); j++){
-				int eraseMinPts = findMinPtsInstances(usedMinPtsInstances[j], minPtsInstances);
-				if (eraseMinPts >= 0){
-					minPtsInstances.erase(minPtsInstances.begin() + eraseMinPts);
+			// create a copy of minPtsInstance that will not be modified
+			vector<int> minPtsInstancesCopy(minPtsInstances);
+
+			findConnComp(minPtsInstances[0], graph, instances, minPtsInstances, minPtsInstancesCopy, k[i], usedMinPtsInstances);
+
+			// remove from list of minPts instances
+			// minPtsInstances.erase(minPtsInstances.begin());
+
+			cout << "k" << i << endl;
+			for (const auto &row : k[i]) {
+				for (double value : row) {
+					cout << value << " ";
 				}
+				cout << endl;
 			}
 		}
 	}
@@ -445,45 +458,54 @@ void connectedComponents(vector<vector<int> > graph, int minpts, int l, int totI
 	totInstances:			size of minPtsInstances
 	k:						vector where put all instaces
 	usedMinPtsInstances:	vector with used minPts instances
-	zero:					bool to check if current instance was used or not
+	erased:					bool to check if current instance was used or not
+	nextInst:				next instance to check after "i" (need to have like a variable because cange with deletion)
 */
-void findConnComp(int i, vector<vector<int> >& graph, vector<vector<double> > instances, vector<int>& minPtsInstances, int totInstances, vector<vector<double> >& k, vector<int>& usedMinPtsInstances){
-	bool zero = false;
+void findConnComp(int i, vector<vector<int> >& graph, vector<vector<double> > instances, vector<int>& minPtsInstances, vector<int>& minPtsInstancesCopy, vector<vector<double> >& k, vector<int>& usedMinPtsInstances){
+	bool erased = false;
+	int nextInst = 0;
+	int j = 1;
 
-	for (int j = 0; j < totInstances; j++){
-		if (graph[minPtsInstances[i]][j] == 1){
-			k.push_back(instances[j]);
+	while (graph[i].size() > 1){
+		nextInst = graph[i][j];
+		k.push_back(instances[nextInst]);
 
-			// step into only in instaces that have minPts vertices
-			if (isInMinPts(j, minPtsInstances)){
-				setAllToZero(graph, minPtsInstances, j);
+		// step into only in instaces that have minPts vertices
+		if (graph[nextInst][0] == 1){
+			eraseAll(graph, minPtsInstancesCopy, nextInst);
 
-				// to shorten the recursive sequence
-				setAllToZero(graph, minPtsInstances, minPtsInstances[i]);
+			// notice that all instances connection with the corrent instance was erased
+			erased = true;
+
+			// track the used minPtsIntance
+			if (!isInMinPts(minPtsInstancesCopy[i], usedMinPtsInstances)){
+				usedMinPtsInstances.push_back(minPtsInstancesCopy[i]);
 			
-				// notice that all instances connection with the corrent instance was set to zero
-				zero = true;
-
-				// track the used minPtsIntance
-				if (!isInMinPts(minPtsInstances[i], usedMinPtsInstances)){
-					usedMinPtsInstances.push_back(minPtsInstances[i]);
-				}
-				
-				findConnComp(findMinPtsInstances(j, minPtsInstances), graph, instances, minPtsInstances, totInstances, k, usedMinPtsInstances);
+				// erase the instance from glogal minPtsInstances
+				int eraseMinPts = findMinPtsInstances(nextInst, minPtsInstances);
+				minPtsInstances.erase(minPtsInstances.begin() + eraseMinPts);
 			}
 
-			setAllToZero(graph, minPtsInstances, j);
+			findConnComp(nextInst, graph, instances, minPtsInstances, minPtsInstancesCopy, k, usedMinPtsInstances);
+		} else {
+			// block the loop when the istance isn't a minPts
+			eraseAll(graph, minPtsInstancesCopy, nextInst);
+			break;
 		}
+
+		j++;
 	}
 
-	// set to zero all instances connection with the corrent instance
-	if (!zero){
+	// erase all instances connection with the current instance
+	if (!erased || graph[nextInst][0] == 1){
 		// track the used minPtsIntance
-		if (!isInMinPts(minPtsInstances[i], usedMinPtsInstances)){
-			usedMinPtsInstances.push_back(minPtsInstances[i]);
+		if (!isInMinPts(minPtsInstancesCopy[i], usedMinPtsInstances)){
+			usedMinPtsInstances.push_back(minPtsInstancesCopy[i]);
+			
+			// erase the instance from glogal minPtsInstances
+			int eraseMinPts = findMinPtsInstances(nextInst, minPtsInstances);
+			minPtsInstances.erase(minPtsInstances.begin() + eraseMinPts);
 		}
-		
-		setAllToZero(graph, minPtsInstances, minPtsInstances[i]);
 	}
 }
 
@@ -503,9 +525,15 @@ bool isInMinPts(int instance, vector<int> minPtsInstances){
 /* function to shorten the recursive function fincConnComp:
 	instance:		number of the column instance of the graph
 */
-void setAllToZero(vector<vector<int> >& graph, vector<int> minPtsInstances, int instance){
-	for (int i = 0; i < minPtsInstances.size(); i++){
-		graph[minPtsInstances[i]][instance] = 0;
+void eraseAll(vector<vector<int> >& graph, vector<int> minPtsInstances, int instance){
+	for (int minPtsInstance : minPtsInstances){
+		for (int j = 1; j < graph[minPtsInstance].size(); j++){
+			if (graph[minPtsInstance][j] == instance){
+				graph[minPtsInstance].erase(graph[minPtsInstance].begin() + j);
+			} else if (graph[minPtsInstance][j] < instance){
+				break;
+			}
+		}
 	}
 }
 
