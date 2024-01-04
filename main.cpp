@@ -46,7 +46,7 @@ int main(int argc, char **argv){
 	int n = 100;
 	double s = 0.4;
 	double epsilon[2] = {0.2, 2.4};
-	int l = 3;
+	int l = 5;
 	int minPts = 2;
 	string filePath = "datasets/iris150.data";
 	vector<int> minPtsInstances;
@@ -244,7 +244,7 @@ vector<vector<double> > sampleInstances(int n, int numLines, ifstream& dataset){
 		oldRandLine = randline;
 		minRange += range;
 		maxRange += range;
-		
+
 		// check if the max limit of the range if > of the total of the lines in the dataset
 		if (maxRange > numLines){
 			maxRange = numLines;
@@ -464,25 +464,26 @@ void connectedComponents(vector<vector<int> > graph, int l, vector<vector<vector
 void findConnComp(int i, vector<vector<int> >& graph, vector<vector<double> > instances, vector<int>& minPtsInstances, vector<int>& minPtsInstancesCopy, vector<vector<double> >& k, vector<int>& usedMinPtsInstances){
 	bool erased = false;
 	int nextInst = 0;
-	int j = 1;
+	int j = graph[i].size()-1; // initialized to have right indexing
 
 	while (graph[i].size() > 1){
 		nextInst = graph[i][j];
-		k.push_back(instances[nextInst]);
 
 		// step into only in instaces that have minPts vertices
 		if (graph[nextInst][0] == 1){
+			k.push_back(instances[nextInst]);
+
 			eraseAll(graph, minPtsInstancesCopy, nextInst);
 
 			// notice that all instances connection with the corrent instance was erased
 			erased = true;
 
 			// track the used minPtsIntance
-			if (!isInMinPts(minPtsInstancesCopy[i], usedMinPtsInstances)){
-				usedMinPtsInstances.push_back(minPtsInstancesCopy[i]);
-			
+			if (!isInMinPts(i, usedMinPtsInstances)){
+				usedMinPtsInstances.push_back(i);
+
 				// erase the instance from glogal minPtsInstances
-				int eraseMinPts = findMinPtsInstances(nextInst, minPtsInstances);
+				int eraseMinPts = findMinPtsInstances(i, minPtsInstances);
 				minPtsInstances.erase(minPtsInstances.begin() + eraseMinPts);
 			}
 
@@ -490,20 +491,19 @@ void findConnComp(int i, vector<vector<int> >& graph, vector<vector<double> > in
 		} else {
 			// block the loop when the istance isn't a minPts
 			eraseAll(graph, minPtsInstancesCopy, nextInst);
-			break;
 		}
 
-		j++;
+		j--;
 	}
 
 	// erase all instances connection with the current instance
-	if (!erased || graph[nextInst][0] == 1){
+	if (!erased){
 		// track the used minPtsIntance
-		if (!isInMinPts(minPtsInstancesCopy[i], usedMinPtsInstances)){
-			usedMinPtsInstances.push_back(minPtsInstancesCopy[i]);
+		if (!isInMinPts(i, usedMinPtsInstances)){
+			usedMinPtsInstances.push_back(i);
 			
 			// erase the instance from glogal minPtsInstances
-			int eraseMinPts = findMinPtsInstances(nextInst, minPtsInstances);
+			int eraseMinPts = findMinPtsInstances(i, minPtsInstances);
 			minPtsInstances.erase(minPtsInstances.begin() + eraseMinPts);
 		}
 	}
