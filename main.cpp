@@ -468,10 +468,10 @@ void findConnComp(int i, vector<vector<int> >& graph, vector<vector<double> > in
 
 	while (graph[i].size() > 1){
 		nextInst = graph[i][j];
+		k.push_back(instances[nextInst]);
 
 		// step into only in instaces that have minPts vertices
 		if (graph[nextInst][0] == 1){
-			k.push_back(instances[nextInst]);
 
 			eraseAll(graph, minPtsInstancesCopy, nextInst);
 
