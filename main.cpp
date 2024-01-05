@@ -28,6 +28,7 @@ void eraseAll(vector<vector<int> >& graph, vector<int> minPtsInstances, int inst
 int findMinPtsInstances(int instance, vector<int> minPtsInstances);
 // void findClusters(vector<vector<double> > instances, int l, vector<vector<vector<double> > > k, vector<vector<vector<double> > >& c);
 // bool isInVector(vector<double> instance, vector<vector<double> > ki);
+void printLoadingBar(int index, int totalIterations);
 
 /*
 	instances:	istances randomly sampled
@@ -54,25 +55,46 @@ int main(int argc, char **argv){
 	// getopt:
 	getOpt(filePath, n, s, epsilon, l, minPts, argc, argv);
 
+	chrono::high_resolution_clock::time_point t_start_total = chrono::high_resolution_clock::now();
+
 	// 1. sampling dataset
+	chrono::high_resolution_clock::time_point t_start_instances = chrono::high_resolution_clock::now();
+
+	cout << "\nSampling " << n << " (n) instances..." << endl;
 	instances = readDataset(filePath, n);
+
+	chrono::high_resolution_clock::time_point t_end_instances = chrono::high_resolution_clock::now();
+	cout << "\n" << chrono::duration<double, milli>(t_end_instances-t_start_instances).count()/1000 << " sec\n" << endl;
 
 	// 2. inizialization of a matrix for graph
 	vector<vector<int> > graph;
 	graph.resize(instances.size());
 
 	// 3. check if a point is in epsilon range
+	chrono::high_resolution_clock::time_point t_start_sn = chrono::high_resolution_clock::now();
+
+	cout << "\nSampling " << s*n << " (sn) instances..." << endl;
 	compareWsnSample(instances, s, n, epsilon, graph, minPts, minPtsInstances);
+
+	chrono::high_resolution_clock::time_point t_end_sn = chrono::high_resolution_clock::now();
+	cout << "\n" << chrono::duration<double, milli>(t_end_sn-t_start_sn).count()/1000 << " sec\n" << endl;
 	
 	// 4. inizialization of an array of l items
 	vector<vector<vector<double> > > k;
+	k.resize(l);
 
 	// 5. create the connected components
-	k.resize(l);
+	chrono::high_resolution_clock::time_point t_start_conncomp = chrono::high_resolution_clock::now();
+
+	cout << "\nFinding connected components..." << endl;
 	connectedComponents(graph, l, k, instances, minPtsInstances);
+
+	chrono::high_resolution_clock::time_point t_end_conncomp = chrono::high_resolution_clock::now();
+	cout << "\n" << chrono::duration<double, milli>(t_end_conncomp-t_start_conncomp).count()/1000 << " sec\n" << endl;
 
 	// print k
 	// for (size_t i = 0; i < k.size(); ++i) {
+	// 	cout << "k" << i << ":" << endl;
     //     for (size_t j = 0; j < k[i].size(); ++j) {
     //         for (size_t m = 0; m < k[i][j].size(); ++m) {
     //             cout << k[i][j][m] << " ";
@@ -84,15 +106,19 @@ int main(int argc, char **argv){
 
 	// 6. inizialization of an array of l items
 	vector<vector<vector<double> > > c;
+	c.resize(l);
 
-	chrono::high_resolution_clock::time_point t_start = chrono::high_resolution_clock::now();
+	// 7. create the clusters
+	chrono::high_resolution_clock::time_point t_start_clust = chrono::high_resolution_clock::now();
 
-	// // 7. create the clusters
-	// c.resize(l);
+	cout << "\nCreating " << l << " (l) clusters..." << endl;
 	// findClusters(instances, l, k, c);
 
-	chrono::high_resolution_clock::time_point t_end = chrono::high_resolution_clock::now();
-	cout << "Total time required = " << chrono::duration<double, milli>(t_end-t_start).count() << endl;
+	chrono::high_resolution_clock::time_point t_end_clust = chrono::high_resolution_clock::now();
+	cout << "\n" << chrono::duration<double, milli>(t_end_clust-t_start_clust).count()/1000 << " sec\n" << endl;
+
+	chrono::high_resolution_clock::time_point t_end_total = chrono::high_resolution_clock::now();
+	cout << "\nTotal computation in " << chrono::duration<double, milli>(t_end_total-t_start_total).count() << " sec" << endl;
 
 	return 0;
 }
@@ -249,6 +275,9 @@ vector<vector<double> > sampleInstances(int n, int numLines, ifstream& dataset){
 		if (maxRange > numLines){
 			maxRange = numLines;
 		}
+
+		// printing the loading bar
+		printLoadingBar(i, numLines);
 	}
 	
 	return instances;
@@ -328,7 +357,9 @@ bool isStringDigit(string str){
 // 	}
 // }
 void compareWsnSample(vector<vector<double> > instances, double s, int n, double epsilon[], vector<vector<int> >& graph, int minPts, vector<int>& minPtsInstances){
-	for (int i = 0; i < instances.size(); i++){
+	int instacesSize = instances.size();
+
+	for (int i = 0; i < instacesSize; i++){
 		int range = n/(s*n);
 		int minRange = 0;
 		int maxRange = range;
@@ -395,6 +426,9 @@ void compareWsnSample(vector<vector<double> > instances, double s, int n, double
 		} else {
 			graph[i].insert(graph[i].begin(), 0);
 		}
+
+		// printing the loading bar
+		printLoadingBar(i, instacesSize);
 	}
 }
 
@@ -438,15 +472,10 @@ void connectedComponents(vector<vector<int> > graph, int l, vector<vector<vector
 
 			// remove from list of minPts instances
 			// minPtsInstances.erase(minPtsInstances.begin());
-
-			cout << "k" << i << endl;
-			for (const auto &row : k[i]) {
-				for (double value : row) {
-					cout << value << " ";
-				}
-				cout << endl;
-			}
 		}
+
+		// printing the loading bar
+		printLoadingBar(i, l);
 	}
 }
 
@@ -554,8 +583,9 @@ int findMinPtsInstances(int instance, vector<int> minPtsInstances){
 // */
 // void findClusters(vector<vector<double> > instances, int l, vector<vector<vector<double> > > k, vector<vector<vector<double> > >& c){
 // 	int connComp = 0;
+// 	int instacesSize = instaces.size();
 
-// 	for (vector<double> instance : instances){
+// 	for (int i = 0; i < instacesSize; i++){
 // 		for (int i = 0; i < l; i++){
 // 			if (isInVector(instance, k[i]) || ){
 // 				c[i].push_back(instance);
@@ -563,8 +593,12 @@ int findMinPtsInstances(int instance, vector<int> minPtsInstances){
 
 // 			}
 // 		}
+
+// 		// printing the loading bar
+// 		printLoadingBar(i, instacesSize);
 // 	}
 // }
+//
 // /* function to find an instance in k:
 // */
 // bool isInVector(vector<double> instance, vector<vector<double> > ki){
@@ -576,3 +610,29 @@ int findMinPtsInstances(int instance, vector<int> minPtsInstances){
 	
 // 	return false;
 // }
+
+/* function to print progression of the computation
+	index:				index of the loop (+1 to get 100%)
+	totalIterations:	total iterations of the loop
+	barWidth:			width of the loading bar
+	percentage:			percentage of the loading bar
+	barLength:			# of "#" in the loading bar
+*/
+void printLoadingBar(int index, int totalIterations){
+	int barWidth = 50;
+	float percentage = float(index+1) / totalIterations;
+	int barLength = int(percentage * barWidth);
+
+	cout << "[";
+
+	for (int i = 0; i < barWidth; ++i) {
+		if (i < barLength) {
+			cout << "#";
+		} else {
+			cout << ".";
+		}
+	}
+
+	cout << "] " << int(percentage * 100.0) << "%" << "\r";
+	cout.flush();
+}
