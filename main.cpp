@@ -247,6 +247,9 @@ vector<vector<double> > sampleInstances(int n, int numLines, ifstream& dataset){
 	
 	// take random elements from "lines"
 	for (int i = 0; i < numLines; i += range){
+		// printing the loading bar
+		printLoadingBar(i, numLines);
+
 		int randline = (rand() % (maxRange - minRange)) + minRange;
 		int loopIter = randline - oldRandLine;
 
@@ -284,9 +287,6 @@ vector<vector<double> > sampleInstances(int n, int numLines, ifstream& dataset){
 		if (maxRange > numLines){
 			maxRange = numLines;
 		}
-
-		// printing the loading bar
-		printLoadingBar(i, numLines);
 	}
 	
 	return instances;
@@ -369,6 +369,9 @@ void compareWsnSample(vector<vector<double> > instances, double s, int n, double
 	int instacesSize = instances.size();
 
 	for (int i = 0; i < instacesSize; i++){
+		// printing the loading bar
+		printLoadingBar(i, instacesSize);
+
 		int range = n/(s*n);
 		int minRange = 0;
 		int maxRange = range;
@@ -436,9 +439,6 @@ void compareWsnSample(vector<vector<double> > instances, double s, int n, double
 		} else {
 			graph[i].insert(graph[i].begin(), 0);
 		}
-
-		// printing the loading bar
-		printLoadingBar(i, instacesSize);
 	}
 }
 
@@ -468,6 +468,9 @@ void connectedComponents(vector<vector<int> > graph, int l, vector<vector<vector
 
 	// fill k with all k_i subgraphs
 	for (int i = 0; i < l; i++){
+		// printing the loading bar
+		printLoadingBar(i, l);
+
 		if (minPtsInstances.size() != 0){
 			// add manually the 1st instance
 			k[i].push_back(instances[minPtsInstances[0]]);
@@ -483,9 +486,6 @@ void connectedComponents(vector<vector<int> > graph, int l, vector<vector<vector
 			// remove from list of minPts instances
 			// minPtsInstances.erase(minPtsInstances.begin());
 		}
-
-		// printing the loading bar
-		printLoadingBar(i, l);
 	}
 }
 
@@ -595,14 +595,14 @@ void findClusters(vector<vector<double> > instances, int l, vector<vector<vector
 	int instacesSize = instances.size();
 
 	for (int i = 0; i < l; i++){
+		// printing the loading bar
+		printLoadingBar(i, l);
+		
 		for (int j = 0; j < instacesSize; j++){
 			if (isInVector(instances[j], k[i], graph)){
 				c[i].push_back(instances[j]);
 			}
 		}
-
-		// printing the loading bar
-		printLoadingBar(i, l);
 	}
 }
 
