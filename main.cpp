@@ -339,32 +339,6 @@ bool isStringDigit(string str){
 	epsilon:	range for a point
 	graph:		graph of the dataset
 */
-// void compareWsnSample(vector<vector<double> > instances, double s, double n, double epsilon[], vector<vector<int> >& graph){
-// 	for (int i = 1; i < instances.size(); i++){
-// 		// sample of s
-// 		vector<vector<double> > instancesCpy = instances;
-// 		int instCpysnSize = instancesCpy.size() - s*n;
-
-// 		while (instancesCpy.size() != instCpysnSize){
-// 			int randline = rand() % instancesCpy.size();
-
-// 			// to not randomly take the same instance
-// 			while (i == randline || randline == 0){
-// 				randline = rand() % instancesCpy.size();
-// 			}
-
-// 			// calculate Euclidean distance for all instance infos
-// 			double euclDistij = euclDist(instances[i], instancesCpy[randline]);
-
-// 			// check if point are in range epsilon
-// 			if (euclDistij >= epsilon[0] && euclDistij <= epsilon[1]){
-// 				graph[i].insert(graph[i].begin(), randline);
-// 			}
-
-// 			instancesCpy.erase(instancesCpy.begin() + randline);
-// 		}
-// 	}
-// }
 void compareWsnSample(vector<vector<double> > instances, double s, int n, double epsilon[], vector<vector<int> >& graph, int minPts, vector<int>& minPtsInstances){
 	int instacesSize = instances.size();
 
@@ -379,36 +353,11 @@ void compareWsnSample(vector<vector<double> > instances, double s, int n, double
 		// sample of s
 		for (int j = 0; j < s*n; j++){
 			int randline = (rand() % (maxRange - minRange)) + minRange;
-			// cout << "randline: " << randline << endl;
 
 			// to not randomly take the same instance
 			while (i == randline){
 				randline = (rand() % (maxRange - minRange)) + minRange;
-				// cout <<  "while randline: " << randline << endl;
 			}
-
-			// calculate Euclidean distance for all instance infos
-			// cout << "euclDist INIZIO:" << endl;
-			// cout << "i: " << i << endl;
-			
-			// cout << "instances[0]: " << endl;
-			// for (double value : instances[0]) {
-			// 	cout << value << ' ';
-			// }
-			// cout << std::endl;
-
-			// cout << "instances[i]: " << endl;
-			// for (double value : instances[i]) {
-			// 	cout << value << ' ';
-			// }
-			// cout << std::endl;
-
-			// cout << "instances[randline]: " << endl;
-			// for (double value : instances[randline]) {
-			// 	cout << value << ' ';
-			// }
-			// cout << std::endl;
-
 
 			// to disregard a comparison between two instances 
 			if (instances[i].size() != instances[randline].size()){
@@ -417,12 +366,10 @@ void compareWsnSample(vector<vector<double> > instances, double s, int n, double
 			}
 
 			double euclDistij = euclDist(instances[i], instances[randline]);
-			// cout << "euclDist: " << &euclDist << endl;
 
 			// check if point are in range epsilon
 			if (euclDistij >= epsilon[0] && euclDistij <= epsilon[1]){
 				graph[i].insert(graph[i].begin(), randline);
-				// cout << "ok i: " << i << endl;
 			}
 
 			minRange += range;
@@ -482,9 +429,6 @@ void connectedComponents(vector<vector<int> > graph, int l, vector<vector<vector
 			vector<int> minPtsInstancesCopy(minPtsInstances);
 
 			findConnComp(minPtsInstances[0], graph, instances, minPtsInstances, minPtsInstancesCopy, k[i], usedMinPtsInstances);
-
-			// remove from list of minPts instances
-			// minPtsInstances.erase(minPtsInstances.begin());
 		}
 	}
 }
@@ -597,7 +541,7 @@ void findClusters(vector<vector<double> > instances, int l, vector<vector<vector
 	for (int i = 0; i < l; i++){
 		// printing the loading bar
 		printLoadingBar(i, l);
-		
+
 		for (int j = 0; j < instacesSize; j++){
 			if (isInVector(instances[j], k[i], graph)){
 				c[i].push_back(instances[j]);
@@ -614,6 +558,7 @@ bool isInVector(vector<double> instance, vector<vector<double> > ki, vector<vect
 		if (instance[0] == kii[0]){
 			return true;
 		} else {
+			// check links
 			for (int i = 1; i < graph[kii[0]].size(); i++){
 				if (instance[0] == graph[kii[0]][i]){
 					return true;
