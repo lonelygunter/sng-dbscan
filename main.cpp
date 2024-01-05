@@ -7,7 +7,6 @@
 #include <cmath>	// math
 #include <getopt.h>	// getopt
 #include <numeric>
-
 #include <chrono>
 
 using namespace std;
@@ -26,8 +25,8 @@ void findConnComp(int i, vector<vector<int> >& graph, vector<vector<double> > in
 bool isInMinPts(int instance, vector<int> minPtsInstances);
 void eraseAll(vector<vector<int> >& graph, vector<int> minPtsInstances, int instance);
 int findMinPtsInstances(int instance, vector<int> minPtsInstances);
-// void findClusters(vector<vector<double> > instances, int l, vector<vector<vector<double> > > k, vector<vector<vector<double> > >& c);
-// bool isInVector(vector<double> instance, vector<vector<double> > ki);
+void findClusters(vector<vector<double> > instances, int l, vector<vector<vector<double> > > k, vector<vector<vector<double> > >& c, vector<vector<int> > graph);
+bool isInVector(vector<double> instance, vector<vector<double> > ki, vector<vector<int> > graph);
 void printLoadingBar(int index, int totalIterations);
 
 /*
@@ -44,13 +43,23 @@ void printLoadingBar(int index, int totalIterations);
 */
 int main(int argc, char **argv){
 	vector<vector<double> > instances;
-	int n = 100;
-	double s = 0.4;
-	double epsilon[2] = {0.2, 2.4};
-	int l = 5;
-	int minPts = 2;
-	string filePath = "datasets/iris150.data";
 	vector<int> minPtsInstances;
+
+	// iris150
+	// int n = 100;
+	// double s = 0.3;
+	// double epsilon[2] = {0.2, 2.2};
+	// int l = 4;
+	// int minPts = 2;
+	// string filePath = "datasets/iris150.data";
+
+	// eshop100k
+	int n = 3000;
+	double s = 0.4;
+	double epsilon[2] = {15, 21};
+	int l = 10;
+	int minPts = 2;
+	string filePath = "datasets/eshop100k.data";
 
 	// getopt:
 	getOpt(filePath, n, s, epsilon, l, minPts, argc, argv);
@@ -112,7 +121,7 @@ int main(int argc, char **argv){
 	chrono::high_resolution_clock::time_point t_start_clust = chrono::high_resolution_clock::now();
 
 	cout << "\nCreating " << l << " (l) clusters..." << endl;
-	// findClusters(instances, l, k, c);
+	findClusters(instances, l, k, c, graph);
 
 	chrono::high_resolution_clock::time_point t_end_clust = chrono::high_resolution_clock::now();
 	cout << "\n" << chrono::duration<double, milli>(t_end_clust-t_start_clust).count()/1000 << " sec\n" << endl;
@@ -123,7 +132,7 @@ int main(int argc, char **argv){
 	return 0;
 }
 
-// functions:
+// FUNCTIONS:
 
 /* function to get options for command line:
 */
@@ -397,6 +406,7 @@ void compareWsnSample(vector<vector<double> > instances, double s, int n, double
 			// }
 			// cout << std::endl;
 
+
 			// to disregard a comparison between two instances 
 			if (instances[i].size() != instances[randline].size()){
 				j--;
@@ -579,37 +589,41 @@ int findMinPtsInstances(int instance, vector<int> minPtsInstances){
 	return -1;
 }
 
-// /* function to determine the clusters:
-// */
-// void findClusters(vector<vector<double> > instances, int l, vector<vector<vector<double> > > k, vector<vector<vector<double> > >& c){
-// 	int connComp = 0;
-// 	int instacesSize = instaces.size();
+/* function to determine the clusters:
+*/
+void findClusters(vector<vector<double> > instances, int l, vector<vector<vector<double> > > k, vector<vector<vector<double> > >& c, vector<vector<int> > graph){
+	int instacesSize = instances.size();
 
-// 	for (int i = 0; i < instacesSize; i++){
-// 		for (int i = 0; i < l; i++){
-// 			if (isInVector(instance, k[i]) || ){
-// 				c[i].push_back(instance);
-// 			} else if (){
+	for (int i = 0; i < l; i++){
+		for (int j = 0; j < instacesSize; j++){
+			if (isInVector(instances[j], k[i], graph)){
+				c[i].push_back(instances[j]);
+			}
+		}
 
-// 			}
-// 		}
+		// printing the loading bar
+		printLoadingBar(i, l);
+	}
+}
 
-// 		// printing the loading bar
-// 		printLoadingBar(i, instacesSize);
-// 	}
-// }
-//
-// /* function to find an instance in k:
-// */
-// bool isInVector(vector<double> instance, vector<vector<double> > ki){
-// 	for (int i = 0; i < ki.size(); i++){
-// 		if (instance == ki[i]){
-// 			return true;
-// 		}
-// 	}
-	
-// 	return false;
-// }
+/* function to find an instance in k:
+*/
+bool isInVector(vector<double> instance, vector<vector<double> > ki, vector<vector<int> > graph){
+	for (vector<double> kii : ki){
+		// check the id of the instance
+		if (instance[0] == kii[0]){
+			return true;
+		} else {
+			for (int i = 1; i < graph[kii[0]].size(); i++){
+				if (instance[0] == graph[kii[0]][i]){
+					return true;
+				}
+			}
+		}
+	}
+
+	return false;
+}
 
 /* function to print progression of the computation
 	index:				index of the loop (+1 to get 100%)
