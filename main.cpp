@@ -21,12 +21,12 @@ bool isStringDigit(string str);
 void compareWsnSample(vector<vector<double> > instances, double s, int n, double epsilon[], vector<vector<int> >& graph, int minPts, vector<int>& minPtsInstances);
 double euclDist(vector<double> point1, vector<double> point2);
 void connectedComponents(vector<vector<int> > graph, int l, vector<vector<vector<double> > >& k, vector<vector<double> > instances, vector<int>& minPtsInstances);
-void findConnComp(int i, vector<vector<int> >& graph, vector<vector<double> > instances, vector<int>& minPtsInstances, vector<int>& minPtsInstancesCopy, vector<vector<double> >& k, vector<int>& usedMinPtsInstances);
+void findConnComp(int i, vector<vector<int> >& graph, vector<vector<double> > instances, vector<int>& minPtsInstances, vector<int>& originalMinPtsInstances, vector<vector<double> >& k, vector<int>& usedMinPtsInstances);
 bool isInMinPts(int instance, vector<int> minPtsInstances);
 void eraseAll(vector<vector<int> >& graph, vector<int> minPtsInstances, int instance);
 int findMinPtsInstances(int instance, vector<int> minPtsInstances);
 void findClusters(vector<vector<double> > instances, int l, vector<vector<vector<double> > > k, vector<vector<vector<double> > >& c, vector<vector<int> > graph);
-bool isInVector(vector<double> instance, vector<vector<double> > ki, vector<vector<int> > graph);
+bool checkInstance(vector<double> instance, vector<vector<double> > ki, vector<vector<int> > graph);
 void printLoadingBar(int index, int totalIterations);
 
 /*
@@ -426,9 +426,9 @@ void connectedComponents(vector<vector<int> > graph, int l, vector<vector<vector
 			eraseAll(graph, minPtsInstances, minPtsInstances[0]);
 
 			// create a copy of minPtsInstance that will not be modified
-			vector<int> minPtsInstancesCopy(minPtsInstances);
+			vector<int> originalMinPtsInstances(minPtsInstances);
 
-			findConnComp(minPtsInstances[0], graph, instances, minPtsInstances, minPtsInstancesCopy, k[i], usedMinPtsInstances);
+			findConnComp(minPtsInstances[0], graph, instances, minPtsInstances, originalMinPtsInstances, k[i], usedMinPtsInstances);
 		}
 	}
 }
@@ -444,7 +444,7 @@ void connectedComponents(vector<vector<int> > graph, int l, vector<vector<vector
 	erased:					bool to check if current instance was used or not
 	nextInst:				next instance to check after "i" (need to have like a variable because cange with deletion)
 */
-void findConnComp(int i, vector<vector<int> >& graph, vector<vector<double> > instances, vector<int>& minPtsInstances, vector<int>& minPtsInstancesCopy, vector<vector<double> >& k, vector<int>& usedMinPtsInstances){
+void findConnComp(int i, vector<vector<int> >& graph, vector<vector<double> > instances, vector<int>& minPtsInstances, vector<int>& originalMinPtsInstances, vector<vector<double> >& k, vector<int>& usedMinPtsInstances){
 	bool erased = false;
 	int nextInst = 0;
 	int j = graph[i].size()-1; // initialized to have right indexing
@@ -456,7 +456,7 @@ void findConnComp(int i, vector<vector<int> >& graph, vector<vector<double> > in
 		// step into only in instaces that have minPts vertices
 		if (graph[nextInst][0] == 1){
 
-			eraseAll(graph, minPtsInstancesCopy, nextInst);
+			eraseAll(graph, originalMinPtsInstances, nextInst);
 
 			// notice that all instances connection with the corrent instance was erased
 			erased = true;
@@ -470,10 +470,10 @@ void findConnComp(int i, vector<vector<int> >& graph, vector<vector<double> > in
 				minPtsInstances.erase(minPtsInstances.begin() + eraseMinPts);
 			}
 
-			findConnComp(nextInst, graph, instances, minPtsInstances, minPtsInstancesCopy, k, usedMinPtsInstances);
+			findConnComp(nextInst, graph, instances, minPtsInstances, originalMinPtsInstances, k, usedMinPtsInstances);
 		} else {
 			// block the loop when the istance isn't a minPts
-			eraseAll(graph, minPtsInstancesCopy, nextInst);
+			eraseAll(graph, originalMinPtsInstances, nextInst);
 		}
 
 		j--;
@@ -543,7 +543,7 @@ void findClusters(vector<vector<double> > instances, int l, vector<vector<vector
 		printLoadingBar(i, l);
 
 		for (int j = 0; j < instacesSize; j++){
-			if (isInVector(instances[j], k[i], graph)){
+			if (checkInstance(instances[j], k[i], graph)){
 				c[i].push_back(instances[j]);
 			}
 		}
@@ -552,7 +552,7 @@ void findClusters(vector<vector<double> > instances, int l, vector<vector<vector
 
 /* function to find an instance in k:
 */
-bool isInVector(vector<double> instance, vector<vector<double> > ki, vector<vector<int> > graph){
+bool checkInstance(vector<double> instance, vector<vector<double> > ki, vector<vector<int> > graph){
 	for (vector<double> kii : ki){
 		// check the id of the instance
 		if (instance[0] == kii[0]){
