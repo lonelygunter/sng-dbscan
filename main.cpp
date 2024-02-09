@@ -20,13 +20,12 @@ vector<double> splitString(int index, string line);
 bool isStringDigit(string str);
 void compareWsnSample(vector<vector<double> > instances, double s, int n, double epsilon[], vector<vector<int> >& graph, int minPts, vector<int>& minPtsInstances);
 double euclDist(vector<double> point1, vector<double> point2);
-void connectedComponents(vector<vector<int> > graph, int l, vector<vector<vector<double> > >& k, vector<vector<double> > instances, vector<int>& minPtsInstances);
-void findConnComp(int i, vector<vector<int> >& graph, vector<vector<double> > instances, vector<int>& minPtsInstances, vector<int>& originalMinPtsInstances, vector<vector<double> >& k, vector<int>& usedMinPtsInstances);
+void connectedComponents(vector<vector<int> > graph, int l, vector<vector<vector<double> > >& k, vector<vector<double> > instances, vector<int>& minPtsInstances, vector<vector<vector<double> > >& c);
+void findConnComp(int i, vector<vector<int> >& graph, vector<vector<double> > instances, vector<int>& minPtsInstances, vector<int> originalMinPtsInstances, vector<vector<double> >& k, vector<int>& usedMinPtsInstances, vector<vector<vector<double> > >& c, vector<vector<int> >& originalGraph, int l);
 bool isInMinPts(int instance, vector<int> minPtsInstances);
 void eraseAll(vector<vector<int> >& graph, vector<int> minPtsInstances, int instance);
 int findMinPtsInstances(int instance, vector<int> minPtsInstances);
-void findClusters(vector<vector<double> > instances, int l, vector<vector<vector<double> > > k, vector<vector<vector<double> > >& c, vector<vector<int> > graph);
-bool checkInstance(vector<double> instance, vector<vector<double> > ki, vector<vector<int> > graph);
+void findClusters(vector<vector<double> > instances, int l, vector<vector<vector<double> > >& c, vector<vector<int> >& graph, int ki);
 void printLoadingBar(int index, int totalIterations);
 
 /*
@@ -45,28 +44,30 @@ int main(int argc, char **argv){
 	vector<vector<double> > instances;
 	vector<int> minPtsInstances;
 
-	// iris150
-	// int n = 100;
-	// double s = 0.3;
-	// double epsilon[2] = {0.2, 2.2};
-	// int l = 4;
-	// int minPts = 2;
-	// string filePath = "datasets/iris150.data";
+	ofstream outFile("new.txt");
 
-	// eshop100k
-	int n = 3000;
-	double s = 0.4;
-	double epsilon[2] = {15, 21};
+	// iris150
+	int n = 150;
+	double s = 0.5;
+	double epsilon[2] = {0.2, 2.9};
 	int l = 10;
 	int minPts = 2;
-	string filePath = "datasets/eshop100k.data";
+	string filePath = "datasets/iris150.data";
+
+	// eshop100k
+	// int n = 3000;
+	// double s = 0.4;
+	// double epsilon[2] = {15, 21};
+	// int l = 10;
+	// int minPts = 2;
+	// string filePath = "datasets/eshop100k.data";
 
 	// getopt:
 	getOpt(filePath, n, s, epsilon, l, minPts, argc, argv);
 
 	chrono::high_resolution_clock::time_point t_start_total = chrono::high_resolution_clock::now();
 
-	// 1. sampling dataset
+	// sampling n instances from dataset
 	chrono::high_resolution_clock::time_point t_start_instances = chrono::high_resolution_clock::now();
 
 	cout << "\nSampling " << n << " (n) instances..." << endl;
@@ -75,11 +76,11 @@ int main(int argc, char **argv){
 	chrono::high_resolution_clock::time_point t_end_instances = chrono::high_resolution_clock::now();
 	cout << "\n" << chrono::duration<double, milli>(t_end_instances-t_start_instances).count()/1000 << " sec\n" << endl;
 
-	// 2. inizialization of a matrix for graph
+	// inizialization of a matrix for graph
 	vector<vector<int> > graph;
 	graph.resize(instances.size());
 
-	// 3. check if a point is in epsilon range
+	// sampling sn instances from dataset and check minPts
 	chrono::high_resolution_clock::time_point t_start_sn = chrono::high_resolution_clock::now();
 
 	cout << "\nSampling " << s*n << " (sn) instances..." << endl;
@@ -88,46 +89,63 @@ int main(int argc, char **argv){
 	chrono::high_resolution_clock::time_point t_end_sn = chrono::high_resolution_clock::now();
 	cout << "\n" << chrono::duration<double, milli>(t_end_sn-t_start_sn).count()/1000 << " sec\n" << endl;
 	
-	// 4. inizialization of an array of l items
+	// inizialization of an vectors of l items
 	vector<vector<vector<double> > > k;
+	vector<vector<vector<double> > > c;
 	k.resize(l);
+	c.resize(l);
 
-	// 5. create the connected components
+	// create clusters with connected components
 	chrono::high_resolution_clock::time_point t_start_conncomp = chrono::high_resolution_clock::now();
 
-	cout << "\nFinding connected components..." << endl;
-	connectedComponents(graph, l, k, instances, minPtsInstances);
+	cout << "\nCreating " << l << " (l) clusters using connected components..." << endl;
+	connectedComponents(graph, l, k, instances, minPtsInstances, c);
 
 	chrono::high_resolution_clock::time_point t_end_conncomp = chrono::high_resolution_clock::now();
 	cout << "\n" << chrono::duration<double, milli>(t_end_conncomp-t_start_conncomp).count()/1000 << " sec\n" << endl;
 
 	// print k
-	// for (size_t i = 0; i < k.size(); ++i) {
-	// 	cout << "k" << i << ":" << endl;
-    //     for (size_t j = 0; j < k[i].size(); ++j) {
-    //         for (size_t m = 0; m < k[i][j].size(); ++m) {
-    //             cout << k[i][j][m] << " ";
-    //         }
-    //         cout << "\n";
-    //     }
-    //     cout << endl;
-    // }
+	for (size_t i = 0; i < k.size(); ++i) {
+		outFile << "k" << i << ":" << endl;
+		for (size_t j = 0; j < k[i].size(); ++j) {
+			for (size_t m = 0; m < k[i][j].size(); ++m) {
+				outFile << k[i][j][m] << " ";
+			}
+			outFile << "\n";
+		}
+		outFile << endl;
+	}
 
-	// 6. inizialization of an array of l items
-	vector<vector<vector<double> > > c;
-	c.resize(l);
+	// // 6. inizialization of an array of l items
+	// vector<vector<vector<double> > > c;
+	// c.resize(l);
 
-	// 7. create the clusters
-	chrono::high_resolution_clock::time_point t_start_clust = chrono::high_resolution_clock::now();
+	// // 7. create the clusters
+	// chrono::high_resolution_clock::time_point t_start_clust = chrono::high_resolution_clock::now();
 
-	cout << "\nCreating " << l << " (l) clusters..." << endl;
-	findClusters(instances, l, k, c, graph);
+	// cout << "\nCreating " << l << " (l) clusters..." << endl;
+	// findClusters(instances, l, k, c, graph);
 
-	chrono::high_resolution_clock::time_point t_end_clust = chrono::high_resolution_clock::now();
-	cout << "\n" << chrono::duration<double, milli>(t_end_clust-t_start_clust).count()/1000 << " sec\n" << endl;
+	// chrono::high_resolution_clock::time_point t_end_clust = chrono::high_resolution_clock::now();
+	// cout << "\n" << chrono::duration<double, milli>(t_end_clust-t_start_clust).count()/1000 << " sec\n" << endl;
+
+	// print c
+	outFile << "\n\n\n";
+	for (size_t i = 0; i < c.size(); ++i) {
+		outFile << "c" << i << ":" << endl;
+        for (size_t j = 0; j < c[i].size(); ++j) {
+            for (size_t m = 0; m < c[i][j].size(); ++m) {
+                outFile << c[i][j][m] << " ";
+            }
+            outFile << "\n";
+        }
+        outFile << endl;
+    }
+
+	outFile.close();
 
 	chrono::high_resolution_clock::time_point t_end_total = chrono::high_resolution_clock::now();
-	cout << "\nTotal computation in " << chrono::duration<double, milli>(t_end_total-t_start_total).count() << " sec" << endl;
+	cout << "\nTotal computation in " << chrono::duration<double, milli>(t_end_total-t_start_total).count()/1000 << " sec" << endl;
 
 	return 0;
 }
@@ -410,8 +428,9 @@ double euclDist(vector<double> point1, vector<double> point2){
 	minPtsInstances:		vector of istances that have minPts vectors connected
 	usedMinPtsInstances:	vector to track which instance was used
 */
-void connectedComponents(vector<vector<int> > graph, int l, vector<vector<vector<double> > >& k, vector<vector<double> > instances, vector<int>& minPtsInstances){
+void connectedComponents(vector<vector<int> > graph, int l, vector<vector<vector<double> > >& k, vector<vector<double> > instances, vector<int>& minPtsInstances, vector<vector<vector<double> > >& c){
 	vector<int> usedMinPtsInstances;
+	vector<vector<int> > originalGraph(graph);
 
 	// fill k with all k_i subgraphs
 	for (int i = 0; i < l; i++){
@@ -428,7 +447,10 @@ void connectedComponents(vector<vector<int> > graph, int l, vector<vector<vector
 			// create a copy of minPtsInstance that will not be modified
 			vector<int> originalMinPtsInstances(minPtsInstances);
 
-			findConnComp(minPtsInstances[0], graph, instances, minPtsInstances, originalMinPtsInstances, k[i], usedMinPtsInstances);
+			// add instances to the i-th cluster
+			findClusters(instances, i, c, originalGraph, minPtsInstances[0]);
+
+			findConnComp(minPtsInstances[0], graph, instances, minPtsInstances, originalMinPtsInstances, k[i], usedMinPtsInstances, c, originalGraph, i);
 		}
 	}
 }
@@ -443,8 +465,9 @@ void connectedComponents(vector<vector<int> > graph, int l, vector<vector<vector
 	usedMinPtsInstances:	vector with used minPts instances
 	erased:					bool to check if current instance was used or not
 	nextInst:				next instance to check after "i" (need to have like a variable because cange with deletion)
+	elseMinPts:				to check if "i" joined into the else of the if
 */
-void findConnComp(int i, vector<vector<int> >& graph, vector<vector<double> > instances, vector<int>& minPtsInstances, vector<int>& originalMinPtsInstances, vector<vector<double> >& k, vector<int>& usedMinPtsInstances){
+void findConnComp(int i, vector<vector<int> >& graph, vector<vector<double> > instances, vector<int>& minPtsInstances, vector<int> originalMinPtsInstances, vector<vector<double> >& k, vector<int>& usedMinPtsInstances, vector<vector<vector<double> > >& c, vector<vector<int> >& originalGraph, int l){
 	bool erased = false;
 	int nextInst = 0;
 	int j = graph[i].size()-1; // initialized to have right indexing
@@ -452,6 +475,9 @@ void findConnComp(int i, vector<vector<int> >& graph, vector<vector<double> > in
 	while (graph[i].size() > 1){
 		nextInst = graph[i][j];
 		k.push_back(instances[nextInst]);
+
+		// add instances to the i-th cluster
+		findClusters(instances, l, c, originalGraph, nextInst);
 
 		// step into only in instaces that have minPts vertices
 		if (graph[nextInst][0] == 1){
@@ -470,7 +496,7 @@ void findConnComp(int i, vector<vector<int> >& graph, vector<vector<double> > in
 				minPtsInstances.erase(minPtsInstances.begin() + eraseMinPts);
 			}
 
-			findConnComp(nextInst, graph, instances, minPtsInstances, originalMinPtsInstances, k, usedMinPtsInstances);
+			findConnComp(nextInst, graph, instances, minPtsInstances, originalMinPtsInstances, k, usedMinPtsInstances, c, originalGraph, l);
 		} else {
 			// block the loop when the istance isn't a minPts
 			eraseAll(graph, originalMinPtsInstances, nextInst);
@@ -534,40 +560,26 @@ int findMinPtsInstances(int instance, vector<int> minPtsInstances){
 }
 
 /* function to determine the clusters:
+	l:		# of the l-th loop
+	ki:		id of the k-th instance
 */
-void findClusters(vector<vector<double> > instances, int l, vector<vector<vector<double> > > k, vector<vector<vector<double> > >& c, vector<vector<int> > graph){
-	int instacesSize = instances.size();
+void findClusters(vector<vector<double> > instances, int l, vector<vector<vector<double> > >& c, vector<vector<int> >& graph, int ki){
+	vector<int> allGraph(graph.size());
+	iota(allGraph.begin(), allGraph.end(), 0);
 
-	for (int i = 0; i < l; i++){
-		// printing the loading bar
-		printLoadingBar(i, l);
-
-		for (int j = 0; j < instacesSize; j++){
-			if (checkInstance(instances[j], k[i], graph)){
-				c[i].push_back(instances[j]);
-			}
-		}
-	}
-}
-
-/* function to find an instance in k:
-*/
-bool checkInstance(vector<double> instance, vector<vector<double> > ki, vector<vector<int> > graph){
-	for (vector<double> kii : ki){
-		// check the id of the instance
-		if (instance[0] == kii[0]){
-			return true;
+	for (vector<double> instance : instances){
+		if (instance[0] == ki){
+			c[l].push_back(instance);
+			eraseAll(graph, allGraph, instance[0]);
 		} else {
-			// check links
-			for (int i = 1; i < graph[kii[0]].size(); i++){
-				if (instance[0] == graph[kii[0]][i]){
-					return true;
+			for (int i = 1; i < graph[ki].size(); i++){
+				if (instance[0] == graph[ki][i]){
+					c[l].push_back(instance);
+					eraseAll(graph, allGraph, instance[0]);
 				}
 			}
 		}
 	}
-
-	return false;
 }
 
 /* function to print progression of the computation
