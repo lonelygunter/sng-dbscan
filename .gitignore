@@ -1,3 +1,6 @@
 
 datasets/household2M.txt
 datasets/household2M.data
+*.arff
+*.data
+*.data

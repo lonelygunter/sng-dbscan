@@ -32,21 +32,93 @@ int main(int argc, char **argv){
 
 	ofstream outFile("new.txt");
 
-	// iris150
-	int n = 150;
-	double s = 0.5;
-	double epsilon[2] = {0.2, 2.9};
-	int l = 10;
-	int minPts = 2;
-	string filePath = "datasets/iris150.data";
-
-	// eshop100k
+	// australian-1M
 	// int n = 3000;
 	// double s = 0.4;
 	// double epsilon[2] = {15, 21};
 	// int l = 10;
 	// int minPts = 2;
-	// string filePath = "datasets/eshop100k.data";
+	// string filePath = "datasets/australian-1M.arff";
+
+	// banck-8k
+	// int n = 3000;
+	// double s = 0.4;
+	// double epsilon[2] = {15, 21};
+	// int l = 10;
+	// int minPts = 2;
+	// string filePath = "datasets/banck-8k.arff";
+
+	// ionosphere-351
+	// int n = 3000;
+	// double s = 0.4;
+	// double epsilon[2] = {15, 21};
+	// int l = 10;
+	// int minPts = 2;
+	// string filePath = "datasets/ionosphere-351.data";
+
+	// iris-150
+	int n = 150;
+	double s = 0.5;
+	double epsilon[2] = {0.2, 2.9};
+	int l = 10;
+	int minPts = 2;
+	string filePath = "datasets/iris-150.data";
+
+	// kc2-522
+	// int n = 3000;
+	// double s = 0.4;
+	// double epsilon[2] = {15, 21};
+	// int l = 10;
+	// int minPts = 2;
+	// string filePath = "datasets/kc2-522.arff";
+
+	// libras-360
+	// int n = 3000;
+	// double s = 0.4;
+	// double epsilon[2] = {15, 21};
+	// int l = 10;
+	// int minPts = 2;
+	// string filePath = "datasets/libras-360.data";
+
+	// mozilla-15k
+	// int n = 3000;
+	// double s = 0.4;
+	// double epsilon[2] = {15, 21};
+	// int l = 10;
+	// int minPts = 2;
+	// string filePath = "datasets/mozilla-15k.arff";
+
+	// pageblocks-5k
+	// int n = 3000;
+	// double s = 0.4;
+	// double epsilon[2] = {15, 21};
+	// int l = 10;
+	// int minPts = 2;
+	// string filePath = "datasets/pageblocks-5k.data";
+
+	// satimage-1M
+	// int n = 3000;
+	// double s = 0.4;
+	// double epsilon[2] = {15, 21};
+	// int l = 10;
+	// int minPts = 2;
+	// string filePath = "datasets/satimage-1M.arff";
+
+	// tokyo-959
+	// int n = 3000;
+	// double s = 0.4;
+	// double epsilon[2] = {15, 21};
+	// int l = 10;
+	// int minPts = 2;
+	// string filePath = "datasets/tokyo-959.arff";
+
+	// vehicle-846
+	// int n = 3000;
+	// double s = 0.4;
+	// double epsilon[2] = {15, 21};
+	// int l = 10;
+	// int minPts = 2;
+	// string filePath = "datasets/vehicle-846.arff";
 
 	// getopt:
 	getOpt(filePath, n, s, epsilon, l, minPts, argc, argv);
