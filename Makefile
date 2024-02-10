@@ -1,11 +1,11 @@
-BUILD = g++ -std=c++11
+BUILD = g++ -std=c++11 -ligraph
 BUILDFLAGS = -Wall -Wextra
 
 # Source files
-SOURCES = main.cpp headers/readDataset.cpp headers/connectedComponents.cpp headers/compareWsnSample.cpp headers/loadingBar.cpp
+SOURCES = main.cpp headers/*.cpp
 
 # Header files
-HEADERS = headers/readDataset.h headers/connectedComponents.h headers/compareWsnSample.h headers/loadingBar.h
+HEADERS = headers/*.h
 
 # Object files
 OBJECTS = $(SOURCES:.cpp=.o)
