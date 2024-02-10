@@ -14,7 +14,6 @@ int conn_comp_igraph(vector<vector<int> > dataset) {
     cout << "Number of edges: " << igraph_ecount(&graph) << endl;
 
     // conn comp
-    igraph_integer_t n = 7;
     igraph_vector_int_t result;
     igraph_vector_int_t membership; // Vector to store membership
     igraph_integer_t num_components;
@@ -24,7 +23,7 @@ int conn_comp_igraph(vector<vector<int> > dataset) {
     igraph_vector_int_init(&membership, 0);
 
     // Find connected components
-    igraph_clusters(&graph, &result, NULL, &num_components, IGRAPH_WEAK);
+    igraph_connected_components(&graph, &result, NULL, &num_components, IGRAPH_WEAK);
 
     // Print the connected components
     cout << "Connected components:" << endl;
@@ -54,12 +53,12 @@ bool createGraphFromDataset(const vector<vector<int> >& dataset, igraph_t* graph
 
     // Add vertices to the graph
     igraph_vector_t vertices;
-    igraph_vector_init_seq(&vertices, 0, numVertices - 1); // Initialize with sequential vertex IDs
+    igraph_vector_init_range(&vertices, 0, numVertices - 1); // Initialize with sequential vertex IDs
     igraph_add_vertices(graph, numVertices, NULL);
 
     // Add edges from the dataset
     for (size_t i = 0; i < numVertices; ++i) {
-        for (const auto& neighbor : dataset[i]) {
+        for (int neighbor : dataset[i]) {
             // Check if the neighbor ID is within the range of vertices
             if (neighbor >= 0 && neighbor < numVertices) {
                 // Add the edge to the graph
