@@ -9,6 +9,8 @@
                 "-g",
                 "${file}",
                 "headers/*.cpp",
+                "-std=c++11",
+                // "-ligraph",
                 "-o",
                 "${fileDirname}/${fileBasenameNoExtension}"
             ],
