@@ -67,7 +67,7 @@ void compareWsnSample(vector<vector<double> > instances, double s, int n, double
 double euclDist(vector<double> point1, vector<double> point2){
 	double euclDistij = 0;
 
-	for (size_t j = 0; j < point1.size(); j++){
+	for (size_t j = 1; j < point1.size(); j++){
 		euclDistij += pow(point1[j] - point2[j], 2);
 	}
 	
