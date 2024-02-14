@@ -5,12 +5,14 @@
 #include <iostream>
 #include <vector>
 #include <utility>
+#include <fstream>
 
 using namespace std;
 
-// Function to compute connected components of an igraph
-int conn_comp_igraph(vector<vector<int> > dataset);
+// function to compute connected components of an igraph
+vector<vector<int> > conn_comp_igraph(vector<vector<int> > dataset, int n, igraph_integer_t &num_components);
 
-bool createGraphFromDataset(const vector<vector<int> >& dataset, igraph_t* graph);
+// function to adapt the graph in a proper data structure
+bool createGraphFromDataset(const vector<vector<int> >& dataset, igraph_t* graph, int n);
 
 #endif // CONN_COMP_IGRAPH_H

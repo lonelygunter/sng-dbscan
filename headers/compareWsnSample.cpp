@@ -13,6 +13,7 @@ void compareWsnSample(vector<vector<double> > instances, double s, int n, double
 	int instacesSize = instances.size();
 
 	for (int i = 0; i < instacesSize; i++){
+		// cout << "i " << i << " instacesSize " << instacesSize << endl;
 		// printing the loading bar
 		printLoadingBar(i, instacesSize);
 
@@ -20,9 +21,19 @@ void compareWsnSample(vector<vector<double> > instances, double s, int n, double
 		int minRange = 0;
 		int maxRange = range;
 
+		// to not have infinite loop into the while
+		if (range <= 1){
+			range = 2;
+			maxRange = range;
+		}
+
 		// sample of s
-		for (int j = 0; j < s*n; j++){
+		for (int j = 0; j < static_cast<int>(s*n); j++){
+			// cout << "j " << j << " s*n " << static_cast<int>(s*n) << endl;
 			int randline = (rand() % (maxRange - minRange)) + minRange;
+			// cout << "maxRange " << maxRange << " minRange " << minRange << endl;
+			// cout << "randline " << randline << endl;
+			
 
 			// to not randomly take the same instance
 			while (i == randline){
@@ -31,21 +42,24 @@ void compareWsnSample(vector<vector<double> > instances, double s, int n, double
 
 			// to disregard a comparison between two instances 
 			if (instances[i].size() != instances[randline].size()){
-				j--;
+				// cout << instances[i].size() << " != " << instances[randline].size() << endl;
 				continue;
 			}
 
-			double euclDistij = euclDist(instances[i], instances[randline]);
+			double calcDistij = calcDist(instances[i], instances[randline]);
 
 			// check if point are in range epsilon
-			if (euclDistij >= epsilon[0] && euclDistij <= epsilon[1]){
+			if (calcDistij >= epsilon[0] && calcDistij <= epsilon[1]){
 				graph[i].insert(graph[i].begin(), randline);
 			}
 
 			minRange += range;
 			maxRange += range;
+			// cout << "POST: maxRange " << maxRange << " minRange " << minRange << endl;
 			if (maxRange > n){
 				maxRange = n;
+				minRange = n - range;
+				// cout << "IF: maxRange " << maxRange << " minRange " << minRange << endl;
 			}
 		}
 
@@ -62,16 +76,25 @@ void compareWsnSample(vector<vector<double> > instances, double s, int n, double
 /* function that calculate the Euclidean distance between two points
 	point1:			1st point of the distance
 	point2: 		2nd point of the distance
-	euclDistij:		Euclidean distance
+	calcDistij:		Euclidean distance
 */
-double euclDist(vector<double> point1, vector<double> point2){
-	double euclDistij = 0;
+// double calcDist(vector<double> point1, vector<double> point2){
+// 	double calcDistij = 0;
+
+// 	for (size_t j = 1; j < point1.size(); j++){
+// 		calcDistij += pow(point1[j] - point2[j], 2);
+// 	}
+	
+// 	calcDistij = sqrt(calcDistij);
+
+// 	return calcDistij;
+// }
+double calcDist(vector<double> point1, vector<double> point2){
+	double calcDistij = 0;
 
 	for (size_t j = 1; j < point1.size(); j++){
-		euclDistij += pow(point1[j] - point2[j], 2);
+		calcDistij += pow(point1[j ] - point2[j], 2);
 	}
-	
-	euclDistij = sqrt(euclDistij);
 
-	return euclDistij;
+	return calcDistij;
 }

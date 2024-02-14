@@ -9,6 +9,7 @@
         "bitset": "cpp",
         "chrono": "cpp",
         "type_traits": "cpp",
-        "unordered_map": "cpp"
+        "unordered_map": "cpp",
+        "vector": "cpp"
     }
 }
